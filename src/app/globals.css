@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * SMG Transport Agency — global design tokens.
+ * Semantic tokens are expressed as HSL channels so Tailwind's hsl(var(--x)) works.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* white */
+    --foreground: 210 100% 12%; /* near-navy ink */
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 100% 12%;
+
+    --muted: 0 0% 96%; /* light grey #F5F5F5-ish */
+    --muted-foreground: 215 16% 38%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 86%;
+    --ring: 45 100% 51%; /* gold focus ring */
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading font-bold tracking-tight text-navy;
+  }
+
+  /* Accessible, highly visible focus state across all interactive elements. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-gold ring-offset-2 ring-offset-background;
+  }
+
+  /* Respect reduced-motion preferences. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Loading skeleton shimmer used across data-fetching views. */
+  .skeleton {
+    @apply animate-pulse rounded-md bg-muted;
+  }
+
+  /* Decorative section background used on the home page hero. */
+  .hero-gradient {
+    background:
+      radial-gradient(1200px 500px at 85% -10%, rgba(255, 193, 7, 0.18), transparent 60%),
+      linear-gradient(160deg, #003366 0%, #002145 60%, #001833 100%);
+  }
+}
+
+/* Print styles for the electronic ticket. */
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  body { background: #fff; }
+}

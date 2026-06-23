@@ -1,0 +1,127 @@
+rules_version = '2';
+
+// =============================================================================
+// SMG Transport Agency — Cloud Firestore security rules.
+//
+// Principles (see SECURITY_NOTES.md):
+//  - Public, non-sensitive operational data (routes, schedules, fares) is readable.
+//  - Customers can only read their OWN private data.
+//  - Booking confirmation, payments and seat holds happen ONLY via trusted server
+//    code (Firebase Admin SDK bypasses these rules); clients cannot write them.
+//  - Guest booking retrieval goes through a rate-limited server endpoint, never
+//    direct client reads.
+//  - Administrative writes require a verified staff role (custom claims).
+//  - Audit logs are append-only for staff.
+//  - Personally identifiable data is never world-readable.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    // Staff role is carried in a custom claim set by the Admin SDK.
+    function role() {
+      return isSignedIn() ? request.auth.token.role : null;
+    }
+    function isStaff() {
+      return role() in ['super_admin', 'operations_manager', 'booking_officer',
+                        'customer_support', 'finance_officer', 'content_editor', 'ticket_inspector'];
+    }
+    function hasAnyRole(roles) {
+      return role() in roles || role() == 'super_admin';
+    }
+
+    // ---- Public operational data: world-readable, staff-writable only ----
+    match /routes/{id}        { allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
+    match /boardingPoints/{id}{ allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
+    match /buses/{id}         { allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
+    match /seatLayouts/{id}   { allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
+    match /schedules/{id}     { allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
+    match /promotions/{id}    { allow read: if true; allow write: if hasAnyRole(['operations_manager','content_editor']); }
+    match /announcements/{id} { allow read: if true; allow write: if hasAnyRole(['content_editor','customer_support']); }
+    match /contentPages/{id}  { allow read: if true; allow write: if hasAnyRole(['content_editor']); }
+    match /faqs/{id}          { allow read: if true; allow write: if hasAnyRole(['content_editor']); }
+
+    // ---- Customers: only the owner may read/write their profile ----
+    match /users/{userId} {
+      allow read, update, delete: if isSignedIn() && uid() == userId;
+      allow create: if isSignedIn() && uid() == userId;
+    }
+
+    // ---- Bookings: owner may read their own; writes are server-only ----
+    match /bookings/{id} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.customerId == uid());
+      // Creation/confirmation/cancellation occur via the Admin SDK on the server.
+      allow create, update, delete: if false;
+    }
+    match /bookingEvents/{id} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
+    match /passengers/{id} {
+      allow read: if isStaff() || (isSignedIn() && resource.data.customerId == uid());
+      allow write: if false;
+    }
+
+    // ---- Payments & refunds: finance/ops read only; never client-writable ----
+    match /payments/{id} {
+      allow read: if hasAnyRole(['finance_officer','operations_manager']);
+      allow write: if false;
+    }
+    match /refunds/{id} {
+      allow read: if hasAnyRole(['finance_officer','operations_manager']);
+      allow write: if false;
+    }
+
+    // ---- Seat holds: entirely server-managed ----
+    match /seatHolds/{id} {
+      allow read, write: if false;
+    }
+
+    // ---- Support messages: anyone may create (server validates); staff read ----
+    match /supportMessages/{id} {
+      allow create: if true;
+      allow read, update: if hasAnyRole(['customer_support']);
+      allow delete: if false;
+    }
+
+    // ---- Notifications: owner read only ----
+    match /notifications/{id} {
+      allow read: if isSignedIn() && resource.data.userId == uid();
+      allow write: if false;
+    }
+
+    // ---- Staff & roles: super admin manages; staff may read ----
+    match /staffProfiles/{id} {
+      allow read: if isStaff();
+      allow write: if role() == 'super_admin';
+    }
+    match /roles/{id} {
+      allow read: if isStaff();
+      allow write: if role() == 'super_admin';
+    }
+
+    // ---- System settings: public read of non-sensitive policy; ops/super write ----
+    match /systemSettings/{id} {
+      allow read: if true;
+      allow write: if hasAnyRole(['operations_manager','finance_officer']);
+    }
+
+    // ---- Audit logs: staff read; append-only (no update/delete) ----
+    match /auditLogs/{id} {
+      allow read: if isStaff();
+      allow create: if isStaff();
+      allow update, delete: if false;
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

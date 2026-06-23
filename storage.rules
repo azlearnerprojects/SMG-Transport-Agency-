@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// =============================================================================
+// SMG Transport Agency — Cloud Storage security rules.
+// Validates content type and size for uploaded media (fleet photos, content
+// images). Public read for published media; writes restricted to staff editors.
+// =============================================================================
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function role() {
+      return request.auth != null ? request.auth.token.role : null;
+    }
+    function isEditor() {
+      return role() in ['super_admin', 'operations_manager', 'content_editor'];
+    }
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 // 5 MB max
+        && request.resource.contentType.matches('image/(png|jpeg|webp|avif)');
+    }
+
+    // Public marketing/fleet media: world-readable, editor-writable images only.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isEditor() && isValidImage();
+    }
+
+    // Customer uploads (e.g. ID documents) — owner only, validated.
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('(image/(png|jpeg|webp))|(application/pdf)');
+    }
+
+    // Default deny.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
