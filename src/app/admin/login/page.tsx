@@ -50,7 +50,7 @@ export default function AdminLoginPage() {
         <CardContent>
           <Alert variant="info" className="mb-4">
             <span className="text-xs">
-              Demo admin — email <strong>admin@smgtransport.test</strong>, password <strong>Demo!Admin2026</strong>.
+              Preview admin: <strong>projects@azlearner.me</strong>, password <strong>Demo!Admin2026</strong>.
               Other demo staff: ops@smgtransport.test, inspector@smgtransport.test (same password).
             </span>
           </Alert>

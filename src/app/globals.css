@@ -14,12 +14,12 @@
     --card: 0 0% 100%;
     --card-foreground: 210 100% 12%;
 
-    --muted: 0 0% 96%; /* light grey #F5F5F5-ish */
+    --muted: 210 33% 97%; /* cloud grey #F5F7FA-ish */
     --muted-foreground: 215 16% 38%;
 
     --border: 214 20% 88%;
     --input: 214 20% 86%;
-    --ring: 45 100% 51%; /* gold focus ring */
+    --ring: 28 89% 69%; /* warm peach focus ring */
 
     --radius: 0.75rem;
   }
@@ -70,8 +70,8 @@
   /* Decorative section background used on the home page hero. */
   .hero-gradient {
     background:
-      radial-gradient(1200px 500px at 85% -10%, rgba(255, 193, 7, 0.18), transparent 60%),
-      linear-gradient(160deg, #003366 0%, #002145 60%, #001833 100%);
+      radial-gradient(1000px 420px at 84% -10%, rgba(247, 178, 103, 0.22), transparent 62%),
+      linear-gradient(160deg, #4F9BE8 0%, #003366 58%, #001833 100%);
   }
 }
 

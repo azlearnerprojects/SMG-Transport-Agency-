@@ -437,8 +437,8 @@ export function buildSeed(now: Date): SeedData {
   const staff: StaffProfile[] = [
     {
       id: 'staff_admin',
-      email: process.env.DEMO_ADMIN_EMAIL ?? 'admin@smgtransport.test',
-      fullName: 'Demo Administrator',
+      email: process.env.DEMO_ADMIN_EMAIL ?? 'projects@azlearner.me',
+      fullName: 'SMG Super Administrator',
       role: 'super_admin',
       active: true,
       createdAt: ts,

@@ -1,11 +1,13 @@
 import type { Config } from 'tailwindcss';
+import animate from 'tailwindcss-animate';
 
 /**
  * SMG Transport Agency design tokens.
- * Brand palette and typography are sourced directly from the intake form (Section 6):
- *  - Deep Navy Blue  #003366  (trust, professionalism)
- *  - Bright Gold/Amber #FFC107 (energy, youthfulness)
- *  - White / Light Grey #F5F5F5 (clean backgrounds, dividers)
+ * SMG preview brand palette:
+ *  - Travel Blue #4F9BE8
+ *  - Deep Navy   #003366
+ *  - Warm Peach  #F7B267
+ *  - Cloud Grey  #F5F7FA
  * Headings: Montserrat. Body: Open Sans. Both loaded via next/font in layout.tsx.
  */
 const config: Config = {
@@ -33,19 +35,32 @@ const config: Config = {
           900: '#001833',
         },
         gold: {
-          DEFAULT: '#FFC107',
-          50: '#fff8e1',
-          100: '#ffecb3',
-          200: '#ffe082',
-          300: '#ffd54f',
-          400: '#ffca28',
-          500: '#FFC107',
-          600: '#ffb300',
-          700: '#ffa000',
-          800: '#ff8f00',
-          900: '#ff6f00',
+          DEFAULT: '#F7B267',
+          50: '#fff7ef',
+          100: '#ffecd8',
+          200: '#ffd6ad',
+          300: '#F7B267',
+          400: '#f49b45',
+          500: '#e98325',
+          600: '#c86718',
+          700: '#9f4d16',
+          800: '#7f3e18',
+          900: '#663317',
         },
-        cloud: '#F5F5F5',
+        blue: {
+          DEFAULT: '#4F9BE8',
+          50: '#eef7ff',
+          100: '#d8ecff',
+          200: '#b9ddff',
+          300: '#89c6ff',
+          400: '#4F9BE8',
+          500: '#2d7ed0',
+          600: '#1d63ad',
+          700: '#194f8c',
+          800: '#183f70',
+          900: '#17365e',
+        },
+        cloud: '#F5F7FA',
         // Semantic tokens mapped to CSS variables (see globals.css)
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
@@ -83,7 +98,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [animate],
 };
 
 export default config;

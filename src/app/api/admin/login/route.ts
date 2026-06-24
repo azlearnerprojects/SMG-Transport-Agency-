@@ -3,6 +3,7 @@ import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { setStaffSession } from '@/lib/auth/session';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
+import { DEMO_MODE } from '@/lib/config';
 import { z } from 'zod';
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
@@ -19,7 +20,7 @@ export const POST = withErrorHandling(async (req: Request) => {
   if (!limit.allowed) return jsonError('Too many attempts. Please wait and try again.', 429);
 
   const { email, password } = schema.parse(await req.json());
-  const demoPassword = process.env.DEMO_ADMIN_PASSWORD;
+  const demoPassword = process.env.DEMO_ADMIN_PASSWORD ?? (DEMO_MODE ? 'Demo!Admin2026' : undefined);
 
   const db = getDb();
   const staff = db.listStaff().find((s) => s.email.toLowerCase() === email.trim().toLowerCase() && s.active);

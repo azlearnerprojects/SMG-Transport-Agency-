@@ -18,9 +18,10 @@ type LoginInput = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user, login } = useCustomerAuth();
+  const { user, login, loginWithGoogle } = useCustomerAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   });
@@ -38,6 +39,15 @@ export default function LoginPage() {
     else router.push('/dashboard');
   }
 
+  async function onGoogleSignIn() {
+    setGoogleLoading(true);
+    setError(null);
+    const res = await loginWithGoogle();
+    setGoogleLoading(false);
+    if (!res.ok) setError(res.error ?? 'Google sign-in failed.');
+    else router.push('/dashboard');
+  }
+
   return (
     <div className="container-page flex min-h-[70vh] items-center justify-center py-12">
       <Card className="w-full max-w-md">
@@ -45,6 +55,17 @@ export default function LoginPage() {
           <CardTitle>Sign in to SMG</CardTitle>
         </CardHeader>
         <CardContent>
+          <Button
+            type="button"
+            variant="outline"
+            className="mb-4 w-full"
+            disabled={googleLoading}
+            onClick={onGoogleSignIn}
+          >
+            {googleLoading ? <Loader2 className="size-4 animate-spin" /> : <span className="font-heading font-bold">G</span>}
+            Continue with Google
+          </Button>
+
           <Alert variant="info" className="mb-4">
             <span className="text-xs">
               Demo accounts (any password): <strong>ama@example.com</strong> or <strong>kofi@example.com</strong>.

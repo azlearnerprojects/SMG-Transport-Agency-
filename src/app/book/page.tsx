@@ -1,45 +1,52 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { getDb } from '@/lib/db';
-import { SearchCard } from '@/components/booking/search-card';
 import { ProgressSteps } from '@/components/booking/progress-steps';
-import { TripResults, type Trip } from '@/components/booking/trip-results';
-import { formatDate } from '@/lib/format';
+import { BookSearchExperience, type StaticTrip } from '@/components/booking/book-search-experience';
 
 export const metadata: Metadata = {
   title: 'Book a Trip',
   description: 'Search SMG intercity departures, compare buses and fares, and pick your seat.',
 };
 
-export default async function BookPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
+function dateOnly(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function addDays(base: Date, days: number): Date {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+export default async function BookPage() {
   const db = getDb();
   const cities = db.getCities();
+  const dates = Array.from({ length: 7 }, (_, offset) => dateOnly(addDays(new Date(), offset)));
+  const trips: StaticTrip[] = [];
 
-  const origin = typeof sp.origin === 'string' ? sp.origin : undefined;
-  const destination = typeof sp.destination === 'string' ? sp.destination : undefined;
-  const date = typeof sp.date === 'string' ? sp.date : new Date().toISOString().slice(0, 10);
-  const passengers = typeof sp.passengers === 'string' ? Number(sp.passengers) : 1;
-
-  const hasSearch = Boolean(origin && destination);
-  let trips: Trip[] = [];
-  if (hasSearch && origin && destination) {
-    trips = db.searchSchedules({ origin, destination, date }).map((e) => ({
-      scheduleId: e.schedule.id,
-      origin: e.route.origin,
-      destination: e.route.destination,
-      departureTime: e.schedule.departureTime,
-      arrivalTime: e.schedule.arrivalTime,
-      durationMinutes: e.route.durationMinutes,
-      busNumber: e.bus.busNumber,
-      busCategory: e.bus.category,
-      amenities: e.bus.amenities,
-      availableSeats: e.availableSeats,
-      minFare: e.minFare,
-    }));
+  for (const origin of cities) {
+    for (const destination of cities) {
+      if (origin === destination) continue;
+      for (const date of dates) {
+        trips.push(
+          ...db.searchSchedules({ origin, destination, date }).map((e) => ({
+            scheduleId: e.schedule.id,
+            origin: e.route.origin,
+            destination: e.route.destination,
+            date: e.schedule.date,
+            departureTime: e.schedule.departureTime,
+            arrivalTime: e.schedule.arrivalTime,
+            durationMinutes: e.route.durationMinutes,
+            busNumber: e.bus.busNumber,
+            busCategory: e.bus.category,
+            amenities: e.bus.amenities,
+            availableSeats: e.availableSeats,
+            minFare: e.minFare,
+          })),
+        );
+      }
+    }
   }
 
   return (
@@ -50,31 +57,9 @@ export default async function BookPage({
         </div>
       </div>
 
-      <div className="container-page pt-8">
-        <h1 className="font-heading text-2xl font-extrabold text-navy md:text-3xl">Find your trip</h1>
-        <p className="mt-2 text-muted-foreground">Choose your route and date to see available departures.</p>
-        <div className="mt-5">
-          <SearchCard cities={cities} variant="inline" defaults={{ origin, destination, date, passengers }} />
-        </div>
-      </div>
-
-      <div className="container-page mt-10">
-        {hasSearch ? (
-          <>
-            <h2 className="mb-4 font-heading text-lg font-bold text-navy">
-              {origin} → {destination} · {formatDate(date)}
-            </h2>
-            <TripResults trips={trips} />
-          </>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border bg-white p-10 text-center">
-            <p className="font-semibold text-navy">Search to see available trips</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Pick a departure city, destination and date above, then press “Search Trips”.
-            </p>
-          </div>
-        )}
-      </div>
+      <Suspense fallback={<div className="container-page py-12 text-sm text-muted-foreground">Loading trips...</div>}>
+        <BookSearchExperience cities={cities} trips={trips} />
+      </Suspense>
     </div>
   );
 }

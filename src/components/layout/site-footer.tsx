@@ -45,8 +45,7 @@ export function SiteFooter() {
           </div>
           <p className="mt-4 max-w-sm text-sm text-white/70">
             A youth-driven transport company making intercity travel across Ghana affordable,
-            reliable and comfortable. {' '}
-            <span className="text-white/50">(Contact details below are placeholders pending CEO approval.)</span>
+            reliable and comfortable.
           </p>
           <ul className="mt-5 space-y-2 text-sm">
             <li className="flex items-center gap-2">
@@ -60,6 +59,9 @@ export function SiteFooter() {
             </li>
             <li className="flex items-start gap-2">
               <MapPin className="mt-0.5 size-4 text-gold" /> {BRAND.office}
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1 size-4 rounded-full bg-gold" aria-hidden /> Support: {BRAND.supportHours}
             </li>
           </ul>
         </div>

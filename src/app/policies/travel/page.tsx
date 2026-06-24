@@ -1,46 +1,55 @@
 import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
 
-export const metadata: Metadata = { title: 'Travel Policies', description: 'SMG travel, luggage and boarding policies.' };
+export const metadata: Metadata = {
+  title: 'Travel Policies',
+  description: 'SMG travel, luggage and boarding policies.',
+};
 
 export default function TravelPolicyPage() {
   return (
     <LegalContent
       title="Travel Policies"
-      subtitle="Guidelines to help your journey run smoothly. (Placeholder content pending approval.)"
+      subtitle="Guidelines to help your journey run smoothly."
       sections={[
         {
-          heading: 'Boarding & arrival',
+          heading: 'Boarding and arrival',
           paragraphs: [
-            'Passengers should arrive at the terminal at least 30 minutes before the scheduled departure time to allow for ticket verification and boarding.',
-            'Buses depart on schedule. SMG cannot guarantee boarding for passengers who arrive after the bus has departed.',
+            'Passengers should arrive at the terminal or boarding point at least 30 minutes before the scheduled departure time to allow for ticket verification, luggage handling and boarding.',
+            'Buses may depart at the scheduled time. Late arrival may result in missed travel, and missed trips are handled according to the cancellation and refund policy.',
           ],
         },
         {
-          heading: 'Tickets & identification',
+          heading: 'Tickets and identification',
           paragraphs: [
-            'A valid e-ticket (QR code, on a phone or printed) must be presented at boarding.',
-            'Passengers may be asked to show a valid ID matching the name on the ticket.',
+            'Passengers must present a valid e-ticket, booking reference or QR code on a phone or printed copy before boarding.',
+            'SMG may request a valid form of identification where needed to verify the passenger name, booking ownership or eligibility for a special fare.',
           ],
         },
         {
           heading: 'Luggage',
           paragraphs: [
-            'Each passenger is entitled to a reasonable luggage allowance. Oversized or excess luggage may attract an additional fee or be declined where space is limited. (Final allowance values pending approval.)',
-            'Dangerous, illegal or prohibited items may not be carried on board.',
+            'Passengers may carry reasonable personal luggage subject to available space and safety requirements. Oversized, commercial or excess luggage may attract an additional fee or may be declined.',
+            'Passengers are responsible for securing fragile, valuable or personal items. Dangerous, illegal, flammable or prohibited items are not allowed on board.',
           ],
         },
         {
-          heading: 'Conduct & safety',
+          heading: 'Conduct and safety',
           paragraphs: [
-            'For everyone’s safety, passengers must follow the instructions of SMG staff and drivers at all times.',
-            'Seat belts, where fitted, should be worn for the duration of the journey.',
+            'Passengers must follow instructions from SMG staff and drivers, respect other passengers and avoid behaviour that may affect safety or comfort.',
+            'Where seat belts are available, passengers should wear them during the journey. Smoking, unlawful substances and disruptive conduct are not permitted.',
           ],
         },
         {
-          heading: 'Children & special assistance',
+          heading: 'Children and special assistance',
           paragraphs: [
-            'Please note any special assistance needs during booking so our team can prepare. We aim to make travel accessible to all passengers.',
+            'Customers travelling with children or passengers who need special assistance should indicate this during booking or contact support before travel so reasonable arrangements can be made.',
+          ],
+        },
+        {
+          heading: 'Delays and operational changes',
+          paragraphs: [
+            'Travel times are estimates and may be affected by traffic, weather, road conditions, security checks or operational needs. SMG will make reasonable efforts to communicate significant changes to affected passengers.',
           ],
         },
       ]}

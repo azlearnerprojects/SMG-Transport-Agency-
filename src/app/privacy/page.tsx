@@ -1,49 +1,64 @@
 import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
+import { BRAND } from '@/lib/config';
 
-export const metadata: Metadata = { title: 'Privacy Policy', description: 'How SMG collects, uses and protects your personal data.' };
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'How SMG collects, uses and protects your personal data.',
+};
 
 export default function PrivacyPage() {
   return (
     <LegalContent
       title="Privacy Policy"
-      subtitle="How we collect, use and protect your personal information."
+      subtitle="How we collect, use, share and protect your personal information."
       sections={[
         {
           heading: 'Information we collect',
           paragraphs: [
-            'We collect the information you provide when booking — such as your name, phone number, email, optional ID details and emergency contact — and information about your bookings and payments.',
+            'We collect information you provide when using the platform, including your name, phone number, email address, passenger details, booking details, support messages and any optional identification or emergency contact information supplied during booking.',
+            'We may also collect technical information such as device type, browser type, IP address, pages visited, timestamps and basic analytics used to improve reliability and security.',
           ],
         },
         {
-          heading: 'How we use your information',
+          heading: 'How we use information',
           paragraphs: [
-            'We use your information to process bookings and payments, issue tickets, provide customer support, send booking notifications and improve our service.',
-            'We do not sell your personal data.',
+            'We use personal information to create and manage bookings, process payments, issue tickets, verify passengers, provide support, send travel updates, prevent fraud and improve the platform.',
+            'We may use contact details to send booking confirmations, payment receipts, ticket links, cancellation or rescheduling updates and important service notices.',
           ],
         },
         {
-          heading: 'Payment data',
+          heading: 'Payments and third-party providers',
           paragraphs: [
-            'Payments are handled by our payment provider. We do not store complete card details on our systems; we retain transaction references for reconciliation and support.',
+            'Payments are handled by secure third-party payment providers. SMG does not store full card numbers, CVV codes or mobile money PINs.',
+            'We retain payment references, amounts, statuses and reconciliation details needed for customer support, refunds, audits and operational reporting.',
           ],
         },
         {
-          heading: 'Data security',
+          heading: 'Sharing information',
           paragraphs: [
-            'We apply reasonable technical and organisational measures to protect your data, including encrypted connections (HTTPS) and access controls. Personally identifiable information is not exposed publicly.',
+            'We may share necessary information with payment processors, email or SMS providers, hosting providers, customer support tools and operational staff who need the information to deliver the service.',
+            'We do not sell personal information. We may disclose information where required by law, regulation, court order or a lawful request from an authorised public body.',
           ],
         },
         {
-          heading: 'Your rights',
+          heading: 'Data security and retention',
           paragraphs: [
-            'You may request access to, correction of, or deletion of your personal data, subject to legal and operational requirements. Account holders can edit their profile and request account deletion from the dashboard.',
+            'We use reasonable technical and organisational measures to protect personal information, including access controls, secure connections and server-side validation.',
+            'We retain information for as long as reasonably necessary for bookings, support, accounting, legal compliance, fraud prevention and service improvement.',
+          ],
+        },
+        {
+          heading: 'Your choices and rights',
+          paragraphs: [
+            'You may request access to, correction of or deletion of your personal information, subject to legal, accounting, security and operational requirements.',
+            'You may also contact SMG if you believe information linked to your booking or account is inaccurate.',
           ],
         },
         {
           heading: 'Contact',
           paragraphs: [
-            'For privacy enquiries, contact our support team via the Contact page. (Final data-protection contact details pending approval.)',
+            `Privacy questions can be sent to ${BRAND.email} or raised through the Contact page.`,
           ],
         },
       ]}

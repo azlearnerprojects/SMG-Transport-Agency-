@@ -29,12 +29,11 @@ export default function ContactPage() {
           <Card>
             <CardContent className="space-y-4 p-6 text-sm">
               <h3 className="font-heading font-bold text-navy">Reach us directly</h3>
-              <p className="text-xs text-muted-foreground">(Contact details are placeholders pending CEO approval.)</p>
               <ContactRow icon={Phone} label="Phone" value={BRAND.supportPhone} />
               <ContactRow icon={MessageCircle} label="WhatsApp" value={BRAND.whatsapp} />
               <ContactRow icon={Mail} label="Email" value={BRAND.email} />
               <ContactRow icon={MapPin} label="Office / terminal" value={BRAND.office} />
-              <ContactRow icon={Clock} label="Support hours" value="Mon–Sun, 6:00–21:00 (placeholder)" />
+              <ContactRow icon={Clock} label="Support hours" value={BRAND.supportHours} />
             </CardContent>
           </Card>
           <Card>

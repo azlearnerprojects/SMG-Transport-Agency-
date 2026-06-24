@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 
 /**
  * Customer auth context (DEMO implementation).
@@ -21,6 +22,7 @@ interface AuthState {
   user: CustomerUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ ok: boolean; error?: string }>;
   register: (u: CustomerUser & { password: string }) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (patch: Partial<CustomerUser>) => void;
@@ -75,6 +77,32 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     return { ok: false, error: 'No account found. Try a demo account or register first.' };
   }, [persist]);
 
+  const loginWithGoogle = useCallback<AuthState['loginWithGoogle']>(async () => {
+    try {
+      const auth = await getFirebaseAuth();
+      if (!auth) {
+        return { ok: false, error: 'Google sign-in is not configured for this preview yet.' };
+      }
+
+      const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const email = result.user.email?.trim().toLowerCase();
+      if (!email) return { ok: false, error: 'Google did not return an email address.' };
+
+      persist({
+        email,
+        fullName: result.user.displayName ?? email.split('@')[0] ?? 'SMG Customer',
+        phone: result.user.phoneNumber ?? '',
+      });
+      return { ok: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Google sign-in failed.';
+      return { ok: false, error: message };
+    }
+  }, [persist]);
+
   const register = useCallback<AuthState['register']>(async (u) => {
     const key = u.email.trim().toLowerCase();
     try {
@@ -100,8 +128,8 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   );
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout, updateProfile }),
-    [user, loading, login, register, logout, updateProfile],
+    () => ({ user, loading, login, loginWithGoogle, register, logout, updateProfile }),
+    [user, loading, login, loginWithGoogle, register, logout, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

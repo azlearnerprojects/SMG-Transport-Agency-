@@ -29,11 +29,11 @@ export function LegalContent({
                 {p}
               </p>
             ))}
-          </section>
+        </section>
         ))}
         <p className="mt-10 rounded-md border border-dashed border-border bg-cloud p-4 text-xs text-muted-foreground">
           {note ??
-            'This is placeholder policy content for development. Final wording is subject to CEO and legal review before launch.'}
+            'This is standard template policy content for the preview site. It should be reviewed before a full public launch.'}
         </p>
       </article>
     </>
