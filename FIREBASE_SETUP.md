@@ -43,10 +43,17 @@ Rules: `firestore.rules`, `storage.rules`. Indexes: `firestore.indexes.json`.
 Roles are carried in the Firebase Auth **custom claim** `role` (see `firestore.rules`).
 Set them with the Admin SDK, e.g.:
 ```js
-await admin.auth().setCustomUserClaims(uid, { role: 'operations_manager' });
+await admin.auth().setCustomUserClaims(uid, { role: 'admin', admin: true });
 ```
-Supported roles: `super_admin`, `operations_manager`, `booking_officer`, `customer_support`,
-`finance_officer`, `content_editor`, `ticket_inspector`.
+Primary auth roles: `super_admin`, `admin`, `staff`, `customer`, `staff_pending`.
+Legacy demo operational roles are still supported by the mock admin modules:
+`operations_manager`, `booking_officer`, `customer_support`, `finance_officer`,
+`content_editor`, `ticket_inspector`.
+
+To bootstrap the first super admin after the user signs in once with Google:
+```powershell
+npm run admin:set-super-admin
+```
 
 ## 7. Emulators (local Firebase)
 `firebase.json` configures Auth (9099), Firestore (8080), Storage (9199), UI (4000).
@@ -62,11 +69,10 @@ for Demo Mode and **throws** in non-demo mode. To go live you must:
 1. Implement a **Firestore adapter** exposing the same method surface as `MockStore`
    (queries, atomic seat holds via `runTransaction`, booking/payment lifecycle, reports).
 2. Wire it into `getDb()` for the non-demo branch.
-3. Replace the demo auth seams: customer auth (`src/lib/auth/customer-auth.tsx`) with
-   Firebase Auth, and staff sessions (`src/lib/auth/session.ts`) with ID-token + claim
-   verification via the Admin SDK.
-4. Move seat-hold cleanup to a scheduled Cloud Function (the demo cleans up lazily).
-5. Persist email/SMS sending and the audit log to Firestore.
+3. Move seat-hold cleanup to a scheduled Cloud Function (the demo cleans up lazily).
+4. Persist email/SMS sending to production providers.
+5. Expand Firestore-backed admin modules beyond users/roles.
 
 The client/admin initialisers (`src/lib/firebase/client.ts`, `admin.ts`) already
-lazy-load the SDKs and no-op safely in Demo Mode.
+lazy-load the SDKs and no-op safely when credentials are missing. See `ADMIN_SETUP.md`
+for the current Google sign-in, user profile, and role-management workflow.

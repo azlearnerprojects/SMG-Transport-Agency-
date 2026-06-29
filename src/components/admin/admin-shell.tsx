@@ -8,18 +8,9 @@ import { ADMIN_NAV } from '@/lib/admin-nav';
 import { Logo } from '@/components/layout/logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ROLE_LABELS } from '@/lib/auth/roles';
 import { cn } from '@/lib/utils';
 import type { StaffRole } from '@/lib/types';
-
-const ROLE_LABEL: Record<StaffRole, string> = {
-  super_admin: 'Super Administrator',
-  operations_manager: 'Operations Manager',
-  booking_officer: 'Booking Officer',
-  customer_support: 'Customer Support',
-  finance_officer: 'Finance Officer',
-  content_editor: 'Content Editor',
-  ticket_inspector: 'Ticket Inspector',
-};
 
 export function AdminShell({
   name,
@@ -35,7 +26,9 @@ export function AdminShell({
   const [open, setOpen] = useState(false);
 
   // Server-side role checks remain authoritative; this only hides irrelevant links.
-  const visible = ADMIN_NAV.filter((item) => role === 'super_admin' || item.roles.includes(role) || item.href === '/admin');
+  const visible = ADMIN_NAV.filter(
+    (item) => role === 'super_admin' || role === 'admin' || item.roles.includes(role) || item.href === '/admin',
+  );
 
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST' }).catch(() => undefined);
@@ -59,7 +52,7 @@ export function AdminShell({
         <div className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold leading-tight">{name}</p>
-            <p className="text-xs text-white/70">{ROLE_LABEL[role]}</p>
+            <p className="text-xs text-white/70">{ROLE_LABELS[role]}</p>
           </div>
           <Link href="/" target="_blank" className="hidden text-white/80 hover:text-white sm:block" aria-label="Open public site">
             <ExternalLink className="size-5" />
@@ -97,7 +90,7 @@ export function AdminShell({
             })}
           </nav>
           <div className="mt-4 px-3">
-            <Badge variant="muted" className="text-[10px]">Role: {ROLE_LABEL[role]}</Badge>
+            <Badge variant="muted" className="text-[10px]">Role: {ROLE_LABELS[role]}</Badge>
           </div>
         </aside>
 

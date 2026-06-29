@@ -22,14 +22,27 @@ export function isFirebaseConfigured(): boolean {
   return Boolean(c.apiKey && c.projectId && c.appId);
 }
 
+export async function getFirebaseApp() {
+  if (!isFirebaseConfigured()) return null;
+  const { initializeApp, getApps, getApp } = await import('firebase/app');
+  return getApps().length ? getApp() : initializeApp(getFirebaseClientConfig());
+}
+
 /**
  * Returns the Firebase Auth instance, or null when unconfigured.
  * Demo data can still run while Firebase Auth is used for customer sign-in previews.
  */
 export async function getFirebaseAuth() {
-  if (!isFirebaseConfigured()) return null;
-  const { initializeApp, getApps, getApp } = await import('firebase/app');
+  const app = await getFirebaseApp();
+  if (!app) return null;
   const { getAuth } = await import('firebase/auth');
-  const app = getApps().length ? getApp() : initializeApp(getFirebaseClientConfig());
   return getAuth(app);
+}
+
+/** Returns the client Firestore instance, or null when Firebase is unconfigured. */
+export async function getFirebaseDb() {
+  const app = await getFirebaseApp();
+  if (!app) return null;
+  const { getFirestore } = await import('firebase/firestore');
+  return getFirestore(app);
 }

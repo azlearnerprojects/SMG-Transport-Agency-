@@ -8,7 +8,7 @@ the production Firestore collections.
 
 | Collection | Purpose | Key fields |
 |---|---|---|
-| `users` | Customer accounts | `email`, `fullName`, `phone`, `emailVerified`, `savedPassengers[]` |
+| `users` | Auth profiles and customer accounts | `uid`, `displayName`, `email`, `photoURL`, `phone`, `role`, `status`, `createdAt`, `updatedAt`, `lastLoginAt` |
 | `staffProfiles` | Staff accounts | `email`, `fullName`, `role`, `active` |
 | `roles` | Role definitions / claims mapping | `role`, permissions |
 | `buses` | Fleet | `busNumber`, `name`, `category`, `seatLayoutId`, `capacity`, `amenities[]`, `status`, `blockedSeatIds[]` |
@@ -29,7 +29,7 @@ the production Firestore collections.
 | `supportMessages` | Contact-form submissions | `name`, `email`, `phone?`, `subject`, `message`, `status` |
 | `notifications` | User notifications | `userId`, `type`, payload |
 | `systemSettings` | Configurable policy | cancellation/reschedule cut-offs, fee %, max reschedules, refund days, seat-hold TTL |
-| `auditLogs` | Append-only staff actions | `at`, `actor`, `action`, `target`, `detail` |
+| `auditLogs` | Append-only staff actions and role changes | `action`, `performedByUid`, `performedByEmail`, `targetUid`, `targetEmail`, `previousValue`, `newValue`, `createdAt` |
 
 All records carry `createdAt` / `updatedAt` (ISO strings) where appropriate.
 

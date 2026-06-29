@@ -1,12 +1,24 @@
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { setStaffSession } from '@/lib/auth/session';
+import { isAdminRole, isAuthRole } from '@/lib/auth/roles';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
+import { normaliseUserProfile } from '@/lib/admin/user-profiles';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 import { DEMO_MODE } from '@/lib/config';
+import type { AccountStatus, AuthRole, StaffRole } from '@/lib/types';
 import { z } from 'zod';
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
+const schema = z
+  .object({
+    email: z.string().email().optional(),
+    password: z.string().min(1).optional(),
+    idToken: z.string().min(10).optional(),
+  })
+  .refine((value) => Boolean(value.idToken || (value.email && value.password)), {
+    message: 'Provide Google ID token or staff email/password.',
+  });
 
 /**
  * POST /api/admin/login — DEMO staff login.
@@ -19,7 +31,87 @@ export const POST = withErrorHandling(async (req: Request) => {
   const limit = rateLimit(`adminlogin:${clientIp(req)}`, 8, 60);
   if (!limit.allowed) return jsonError('Too many attempts. Please wait and try again.', 429);
 
-  const { email, password } = schema.parse(await req.json());
+  const { email, password, idToken } = schema.parse(await req.json());
+
+  if (idToken) {
+    const auth = await getAdminAuth();
+    const firestore = await getAdminFirestore();
+    if (!auth || !firestore) {
+      return jsonError('Firebase Admin SDK is not configured on this server.', 503);
+    }
+
+    const decoded = await auth.verifyIdToken(idToken, true);
+    const decodedEmail = decoded.email?.trim().toLowerCase();
+    if (!decodedEmail) return jsonError('Google account did not include an email address.', 401);
+
+    const userRef = firestore.collection('users').doc(decoded.uid);
+    const snap = await userRef.get();
+    const now = new Date().toISOString();
+    const claimRole = isAuthRole(typeof decoded.role === 'string' ? decoded.role : undefined)
+      ? (decoded.role as AuthRole)
+      : undefined;
+
+    if (!snap.exists) {
+      await userRef.set({
+        uid: decoded.uid,
+        displayName: decoded.name ?? decodedEmail.split('@')[0],
+        email: decodedEmail,
+        photoURL: decoded.picture ?? '',
+        role: claimRole ?? 'customer',
+        status: 'active' satisfies AccountStatus,
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      });
+    } else {
+      await userRef.set(
+        {
+          uid: decoded.uid,
+          displayName: decoded.name ?? snap.get('displayName') ?? decodedEmail.split('@')[0],
+          email: decodedEmail,
+          photoURL: decoded.picture ?? snap.get('photoURL') ?? '',
+          updatedAt: now,
+          lastLoginAt: now,
+        },
+        { merge: true },
+      );
+    }
+
+    const fresh = await userRef.get();
+    const profile = normaliseUserProfile(decoded.uid, fresh.data() ?? {});
+    const effectiveRole = claimRole ?? profile.role;
+    const effectiveStatus = profile.status;
+
+    if (effectiveStatus !== 'active') {
+      return jsonError('This account is not active yet. Please contact a Super Admin.', 403);
+    }
+    if (!isAdminRole(effectiveRole)) {
+      return jsonError('Access denied - this area is for authorized staff only.', 403);
+    }
+
+    await setStaffSession({
+      uid: decoded.uid,
+      email: decodedEmail,
+      name: profile.displayName,
+      role: effectiveRole as StaffRole,
+      photoURL: profile.photoURL,
+    });
+
+    await firestore.collection('auditLogs').add({
+      action: 'admin_login',
+      performedByUid: decoded.uid,
+      performedByEmail: decodedEmail,
+      targetUid: decoded.uid,
+      targetEmail: decodedEmail,
+      previousValue: null,
+      newValue: { role: effectiveRole, status: effectiveStatus },
+      createdAt: now,
+    });
+
+    return jsonOk({ email: decodedEmail, role: effectiveRole, name: profile.displayName });
+  }
+
+  if (!email || !password) return jsonError('Provide staff email and password.', 400);
   const demoPassword = process.env.DEMO_ADMIN_PASSWORD ?? (DEMO_MODE ? 'Demo!Admin2026' : undefined);
 
   const db = getDb();

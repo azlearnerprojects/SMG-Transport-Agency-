@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Field, Alert } from '@/components/ui/misc';
@@ -49,10 +49,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container-page flex min-h-[70vh] items-center justify-center py-12">
-      <Card className="w-full max-w-md">
-        <CardHeader>
+    <div className="relative overflow-hidden bg-cloud">
+      <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_18%_20%,rgba(255,193,7,0.24),transparent_30%),linear-gradient(135deg,#003366_0%,#1a5a96_58%,#001833_100%)]" />
+      <div className="container-page relative flex min-h-[78vh] items-center justify-center py-12">
+      <Card className="w-full max-w-md border-white/50 bg-white/90 shadow-card-hover backdrop-blur">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full bg-gold/20 px-3 py-1 text-xs font-semibold text-navy">
+            <Sparkles className="size-3.5" /> Welcome aboard
+          </div>
           <CardTitle>Sign in to SMG</CardTitle>
+          <p className="text-sm text-muted-foreground">Book faster, manage trips, and keep your profile synced.</p>
         </CardHeader>
         <CardContent>
           <Button
@@ -98,6 +104,7 @@ export default function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

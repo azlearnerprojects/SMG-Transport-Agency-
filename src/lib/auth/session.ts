@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
+import { canUseStaffDashboard } from '@/lib/auth/roles';
 import type { StaffRole } from '@/lib/types';
 
 /**
@@ -15,9 +16,11 @@ const COOKIE = 'smg_admin';
 const SECRET = process.env.ADMIN_SESSION_SECRET ?? process.env.QR_VERIFY_SECRET ?? 'smg-demo-admin-secret';
 
 export interface StaffSession {
+  uid?: string;
   email: string;
   role: StaffRole;
   name: string;
+  photoURL?: string;
 }
 
 function sign(payload: string): string {
@@ -66,5 +69,10 @@ export async function clearStaffSession(): Promise<void> {
 export function roleAllowed(session: StaffSession | null, allowed: StaffRole[]): boolean {
   if (!session) return false;
   if (session.role === 'super_admin') return true;
+  if (session.role === 'admin') return true;
   return allowed.includes(session.role);
+}
+
+export function canAccessAdmin(session: StaffSession | null): boolean {
+  return canUseStaffDashboard(session?.role);
 }

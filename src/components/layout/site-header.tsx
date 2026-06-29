@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Menu, X, User } from 'lucide-react';
 import { Logo } from './logo';
 import { Button } from '@/components/ui/button';
+import { useCustomerAuth } from '@/lib/auth/customer-auth';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -20,6 +21,7 @@ const NAV = [
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { user } = useCustomerAuth();
 
   // Close the mobile menu on navigation.
   useEffect(() => setOpen(false), [pathname]);
@@ -45,11 +47,24 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              <User className="size-4" /> Sign in
-            </Button>
-          </Link>
+          {user ? (
+            <>
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm">
+                  <User className="size-4" /> Dashboard
+                </Button>
+              </Link>
+              <Link href="/profile">
+                <Button variant="outline" size="sm">Profile</Button>
+              </Link>
+            </>
+          ) : (
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                <User className="size-4" /> Sign in
+              </Button>
+            </Link>
+          )}
           <Link href="/book">
             <Button size="sm">Book Now</Button>
           </Link>
@@ -79,9 +94,9 @@ export function SiteHeader() {
               </Link>
             ))}
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <Link href="/login">
+              <Link href={user ? '/profile' : '/login'}>
                 <Button variant="outline" className="w-full">
-                  Sign in
+                  {user ? 'Profile' : 'Sign in'}
                 </Button>
               </Link>
               <Link href="/book">

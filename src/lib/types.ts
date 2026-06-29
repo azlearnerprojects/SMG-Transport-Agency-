@@ -49,8 +49,19 @@ export type PaymentMethod =
   | 'card'
   | 'bank_transfer';
 
+export type AuthRole =
+  | 'super_admin'
+  | 'admin'
+  | 'staff'
+  | 'customer'
+  | 'staff_pending';
+
+export type AccountStatus = 'active' | 'pending' | 'disabled';
+
 export type StaffRole =
   | 'super_admin'
+  | 'admin'
+  | 'staff'
   | 'operations_manager'
   | 'booking_officer'
   | 'customer_support'
@@ -289,6 +300,17 @@ export interface AppUser extends Timestamps {
   savedPassengers: PassengerDetails[];
 }
 
+export interface UserProfile extends Timestamps {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL?: string;
+  phone?: string;
+  role: AuthRole;
+  status: AccountStatus;
+  lastLoginAt: string;
+}
+
 export interface StaffProfile extends Timestamps {
   id: string;
   email: string;
@@ -304,6 +326,18 @@ export interface AuditLog {
   action: string;
   target: string;
   detail: string;
+}
+
+export interface RoleAuditLog {
+  id?: string;
+  action: string;
+  performedByUid?: string | null;
+  performedByEmail: string;
+  targetUid: string;
+  targetEmail: string;
+  previousValue: unknown;
+  newValue: unknown;
+  createdAt: string;
 }
 
 export interface SystemSettings {
