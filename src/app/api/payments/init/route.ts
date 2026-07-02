@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 export const POST = withErrorHandling(async (req: Request) => {
   const body = initPaymentSchema.parse(await req.json());
   const db = getDb();
-  const booking = db.getBookingByReference(body.bookingReference);
+  const booking = await db.getBookingByReference(body.bookingReference);
   if (!booking) return jsonError('Booking not found.', 404);
   if (booking.status === 'confirmed') {
     return jsonOk({ alreadyPaid: true, authorizationUrl: `${APP_URL}/ticket/${booking.reference}` });
@@ -28,7 +28,7 @@ export const POST = withErrorHandling(async (req: Request) => {
     callbackUrl: `${APP_URL}/api/payments/verify`,
   });
 
-  db.recordPaymentInit({
+  await db.recordPaymentInit({
     bookingReference: booking.reference,
     provider: provider.name,
     method: body.method,

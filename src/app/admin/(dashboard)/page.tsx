@@ -47,13 +47,15 @@ function countByStatus(bookings: Booking[]) {
 export default async function AdminOverview() {
   const session = await getStaffSession();
   const db = getDb();
-  const overview = db.overview();
-  const bookings = db.listBookings();
-  const routes = db.listRoutes();
-  const buses = db.listBuses();
-  const schedules = db.listSchedules();
-  const payments = db.listPayments();
-  const chatSessions = await countChatSessions();
+  const [overview, bookings, routes, buses, schedules, payments, chatSessions] = await Promise.all([
+    db.overview(),
+    db.listBookings(),
+    db.listRoutes(),
+    db.listBuses(),
+    db.listSchedules(),
+    db.listPayments(),
+    countChatSessions(),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
 
   const pendingChanges = bookings.filter((booking) =>

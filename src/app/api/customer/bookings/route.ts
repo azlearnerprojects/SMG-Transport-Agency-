@@ -18,8 +18,8 @@ export const POST = withErrorHandling(async (req: Request) => {
   const db = getDb();
   const key = email.trim().toLowerCase();
   // Match by customerId (seeded users) OR by passenger email on the booking.
-  const customer = db.listCustomers().find((u) => u.email.toLowerCase() === key);
-  const all = db.listBookings();
+  const customer = (await db.listCustomers()).find((u) => u.email.toLowerCase() === key);
+  const all = await db.listBookings();
   const bookings = all.filter(
     (b) => (customer && b.customerId === customer.id) || b.passenger.email.toLowerCase() === key,
   );

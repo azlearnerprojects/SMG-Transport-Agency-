@@ -12,7 +12,7 @@ export default async function AdminStaff() {
   if (session?.role !== 'super_admin') return <RestrictedNotice module="Staff Accounts" />;
 
   const db = getDb();
-  const staff = db.listStaff();
+  const staff = await db.listStaff();
 
   const cols: Column<StaffProfile>[] = [
     { key: 'fullName', header: 'Name' },

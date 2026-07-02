@@ -11,7 +11,7 @@ export const POST = withErrorHandling(
 
     const { reference } = await ctx.params;
     const db = getDb();
-    const booking = db.getBookingByReference(reference);
+    const booking = await db.getBookingByReference(reference);
     if (!booking) return jsonError('Booking not found.', 404);
     if (booking.status !== 'confirmed' && booking.status !== 'checked_in') {
       return jsonError('Tickets are only available for confirmed bookings.', 409);

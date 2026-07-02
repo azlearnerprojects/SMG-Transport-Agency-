@@ -6,9 +6,9 @@ import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = { title: 'Admin · Seat Layouts' };
 
-export default function AdminSeatLayouts() {
+export default async function AdminSeatLayouts() {
   const db = getDb();
-  const layouts = db.listLayouts();
+  const layouts = await db.listLayouts();
 
   return (
     <>

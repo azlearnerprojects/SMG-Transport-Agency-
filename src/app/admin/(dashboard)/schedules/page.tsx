@@ -19,29 +19,29 @@ type Row = {
 
 export const metadata: Metadata = { title: 'Admin · Schedules' };
 
-export default function AdminSchedules() {
+export default async function AdminSchedules() {
   const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
 
-  const rows: Row[] = db
-    .listSchedules()
+  const upcoming = (await db.listSchedules())
     .filter((s) => s.date >= today)
     .sort((a, b) => `${a.date}${a.departureTime}`.localeCompare(`${b.date}${b.departureTime}`))
-    .slice(0, 80)
-    .map((s) => {
-      const v = db.getScheduleView(s.id);
-      return {
-        id: s.id,
-        date: s.date,
-        departureTime: s.departureTime,
-        arrivalTime: s.arrivalTime,
-        route: v ? `${v.route.origin} → ${v.route.destination}` : s.routeId,
-        bus: v ? `${v.bus.busNumber} (${v.bus.category})` : s.busId,
-        fares: `${formatCurrency(s.fares.standard)} / ${formatCurrency(s.fares.business)} / ${formatCurrency(s.fares.vip)}`,
-        available: v?.availableSeats ?? 0,
-        status: s.status,
-      };
-    });
+    .slice(0, 80);
+  const views = await Promise.all(upcoming.map((s) => db.getScheduleView(s.id)));
+  const rows: Row[] = upcoming.map((s, index) => {
+    const v = views[index];
+    return {
+      id: s.id,
+      date: s.date,
+      departureTime: s.departureTime,
+      arrivalTime: s.arrivalTime,
+      route: v ? `${v.route.origin} → ${v.route.destination}` : s.routeId,
+      bus: v ? `${v.bus.busNumber} (${v.bus.category})` : s.busId,
+      fares: `${formatCurrency(s.fares.standard)} / ${formatCurrency(s.fares.business)} / ${formatCurrency(s.fares.vip)}`,
+      available: v?.availableSeats ?? 0,
+      status: s.status,
+    };
+  });
 
   const cols: Column<Row>[] = [
     { key: 'date', header: 'Date', render: (r) => formatDate(r.date) },

@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Booking details', robots: { index: f
 export default async function BookingPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;
   const db = getDb();
-  const booking = db.getBookingByReference(reference);
+  const booking = await db.getBookingByReference(reference);
   if (!booking) notFound();
 
   return (

@@ -30,7 +30,7 @@ export default async function VerifyPage({
   }
 
   const db = getDb();
-  const result = db.verifyTicket(ref);
+  const result = await db.verifyTicket(ref);
 
   if (!result.found) {
     return (

@@ -20,7 +20,7 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
   const patch = schema.parse(await req.json());
   const db = getDb();
-  const updated = db.updateSettings(patch);
-  db.addAudit({ actor: session!.email, action: 'update_settings', target: 'systemSettings', detail: JSON.stringify(patch) });
+  const updated = await db.updateSettings(patch);
+  await db.addAudit({ actor: session!.email, action: 'update_settings', target: 'systemSettings', detail: JSON.stringify(patch) });
   return jsonOk({ settings: updated });
 });

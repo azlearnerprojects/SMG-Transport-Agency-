@@ -7,9 +7,9 @@ import type { Bus } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Buses' };
 
-export default function AdminBuses() {
+export default async function AdminBuses() {
   const db = getDb();
-  const buses = db.listBuses();
+  const buses = await db.listBuses();
   const csv = buses.map((b) => ({ busNumber: b.busNumber, name: b.name, category: b.category, capacity: b.capacity, status: b.status, amenities: b.amenities.join(' | ') }));
 
   const cols: Column<Bus>[] = [

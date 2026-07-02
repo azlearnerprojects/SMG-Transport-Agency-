@@ -7,9 +7,9 @@ import type { SupportMessage } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Support Inbox' };
 
-export default function AdminSupport() {
+export default async function AdminSupport() {
   const db = getDb();
-  const messages = db.listSupportMessages();
+  const messages = await db.listSupportMessages();
 
   const cols: Column<SupportMessage>[] = [
     { key: 'name', header: 'From', render: (m) => <><div className="font-medium text-navy">{m.name}</div><div className="text-xs text-muted-foreground">{m.email}</div></> },

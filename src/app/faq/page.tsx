@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   description: 'Answers to common questions about booking, payments, tickets and travel with SMG.',
 };
 
-export default function FaqPage() {
+export default async function FaqPage() {
   const db = getDb();
-  const faqs = db.listFaqs();
+  const faqs = await db.listFaqs();
   const categories = [...new Set(faqs.map((f) => f.category))];
 
   // FAQ structured data for rich results.
@@ -44,7 +44,7 @@ export default function FaqPage() {
             </div>
           </section>
         ))}
-        <p className="text-xs text-muted-foreground">FAQ content is editable in the admin CMS and pending final review.</p>
+        <p className="text-xs text-muted-foreground">FAQ content is managed from the admin dashboard.</p>
       </div>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     </>

@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions',
   description: 'Terms governing use of the SMG booking platform.',
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const { config: site } = await getPublicSiteConfig();
   return (
     <LegalContent
       title="Terms & Conditions"
@@ -64,7 +65,7 @@ export default function TermsPage() {
         {
           heading: '8. Contact',
           paragraphs: [
-            `Questions about these terms can be sent to ${BRAND.email} or raised through the Contact page.`,
+            `Questions about these terms can be sent to ${site.supportEmail} or raised through the Contact page.`,
           ],
         },
       ]}

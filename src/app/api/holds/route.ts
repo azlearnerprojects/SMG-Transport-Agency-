@@ -6,7 +6,7 @@ import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 export const POST = withErrorHandling(async (req: Request) => {
   const body = holdSeatsSchema.parse(await req.json());
   const db = getDb();
-  const result = db.holdSeats(body);
+  const result = await db.holdSeats(body);
   if (!result.ok) {
     return jsonError(
       result.conflictSeats && result.conflictSeats.length

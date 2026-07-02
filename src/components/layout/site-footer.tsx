@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Phone, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { Logo } from './logo';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 
 const COLS = [
   {
@@ -34,8 +34,16 @@ const COLS = [
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
   const year = new Date().getFullYear();
+  const { config: site } = await getPublicSiteConfig();
+  const socials = [
+    { label: 'Facebook', href: site.socialFacebook },
+    { label: 'Instagram', href: site.socialInstagram },
+    { label: 'X', href: site.socialTwitter },
+    { label: 'TikTok', href: site.socialTiktok },
+  ].filter((s) => s.href);
+
   return (
     <footer className="mt-20 border-t border-border bg-navy text-white/90">
       <div className="container-page grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-5">
@@ -49,19 +57,19 @@ export function SiteFooter() {
           </p>
           <ul className="mt-5 space-y-2 text-sm">
             <li className="flex items-center gap-2">
-              <Phone className="size-4 text-gold" /> {BRAND.supportPhone}
+              <Phone className="size-4 text-gold" /> {site.supportPhone}
             </li>
             <li className="flex items-center gap-2">
-              <MessageCircle className="size-4 text-gold" /> WhatsApp: {BRAND.whatsapp}
+              <MessageCircle className="size-4 text-gold" /> WhatsApp: {site.supportWhatsapp}
             </li>
             <li className="flex items-center gap-2">
-              <Mail className="size-4 text-gold" /> {BRAND.email}
+              <Mail className="size-4 text-gold" /> {site.supportEmail}
             </li>
             <li className="flex items-start gap-2">
-              <MapPin className="mt-0.5 size-4 text-gold" /> {BRAND.office}
+              <MapPin className="mt-0.5 size-4 text-gold" /> {site.companyAddress}
             </li>
             <li className="flex items-start gap-2">
-              <span className="mt-1 size-4 rounded-full bg-gold" aria-hidden /> Support: {BRAND.supportHours}
+              <span className="mt-1 size-4 rounded-full bg-gold" aria-hidden /> Support: {site.supportHours}
             </li>
           </ul>
         </div>
@@ -84,13 +92,16 @@ export function SiteFooter() {
 
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col items-center justify-between gap-3 py-5 text-xs text-white/60 sm:flex-row">
-          <p>© {year} {BRAND.name}. All rights reserved.</p>
-          <div className="flex gap-4">
-            <a href={BRAND.social.facebook} className="hover:text-white">Facebook</a>
-            <a href={BRAND.social.instagram} className="hover:text-white">Instagram</a>
-            <a href={BRAND.social.twitter} className="hover:text-white">X</a>
-            <a href={BRAND.social.tiktok} className="hover:text-white">TikTok</a>
-          </div>
+          <p>© {year} {site.siteName}. All rights reserved.</p>
+          {socials.length > 0 && (
+            <div className="flex gap-4">
+              {socials.map((s) => (
+                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="hover:text-white">
+                  {s.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </footer>

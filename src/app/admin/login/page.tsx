@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Logo } from '@/components/layout/logo';
 import { useCustomerAuth } from '@/lib/auth/customer-auth';
 import { getFirebaseAuth } from '@/lib/firebase/client';
+import { DEMO_MODE } from '@/lib/config';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -106,34 +107,42 @@ export default function AdminLoginPage() {
             Continue with Google
           </Button>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            Preview access
-            <span className="h-px flex-1 bg-border" />
-          </div>
+          {DEMO_MODE ? (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                Preview access
+                <span className="h-px flex-1 bg-border" />
+              </div>
 
-          <Alert variant="info" className="mb-4">
-            <span className="text-xs">
-              Preview admin: <strong>projects@azlearner.me</strong>, password <strong>Demo!Admin2026</strong>.
-              Other demo staff: ops@smgtransport.test, inspector@smgtransport.test (same password).
-            </span>
-          </Alert>
-          <form onSubmit={submit} className="space-y-4">
-            <Field label="Staff email" htmlFor="email" required>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </Field>
-            <Field label="Password" htmlFor="password" required>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            </Field>
-            {error && <Alert variant="danger">{error}</Alert>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <BusFront className="size-4" />}
-              Sign in with demo password
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Production uses Firebase Auth + role custom claims. No production password is stored in code.
-          </p>
+              <Alert variant="info" className="mb-4">
+                <span className="text-xs">
+                  Preview admin: <strong>projects@azlearner.me</strong>, password <strong>Demo!Admin2026</strong>.
+                  Other demo staff: ops@smgtransport.test, inspector@smgtransport.test (same password).
+                </span>
+              </Alert>
+              <form onSubmit={submit} className="space-y-4">
+                <Field label="Staff email" htmlFor="email" required>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </Field>
+                <Field label="Password" htmlFor="password" required>
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                </Field>
+                {error && <Alert variant="danger">{error}</Alert>}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? <Loader2 className="size-4 animate-spin" /> : <BusFront className="size-4" />}
+                  Sign in with demo password
+                </Button>
+              </form>
+            </>
+          ) : (
+            <>
+              {error && <Alert variant="danger" className="mt-4">{error}</Alert>}
+              <p className="mt-4 text-center text-xs text-muted-foreground">
+                Sign in with your authorized staff Google account. Access is granted by a Super Admin.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

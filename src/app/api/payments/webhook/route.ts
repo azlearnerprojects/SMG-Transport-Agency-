@@ -31,7 +31,7 @@ export const POST = withErrorHandling(async (req: Request) => {
 
   if (event.event === 'charge.success' && event.data?.reference) {
     const db = getDb();
-    const confirm = db.confirmPayment({
+    const confirm = await db.confirmPayment({
       providerReference: event.data.reference,
       bookingReference: event.data.metadata?.bookingReference,
     });

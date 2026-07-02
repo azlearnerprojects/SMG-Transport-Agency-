@@ -14,7 +14,7 @@ export default async function PaymentStatusPage({
 }) {
   const { status, ref } = await searchParams;
   const db = getDb();
-  const booking = ref ? db.getBookingByReference(ref) : undefined;
+  const booking = ref ? await db.getBookingByReference(ref) : undefined;
   const success = status === 'success' && booking?.status === 'confirmed';
 
   return (

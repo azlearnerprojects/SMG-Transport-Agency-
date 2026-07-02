@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "seed": "tsx scripts/seed.ts",
+    "seed:firestore": "tsx scripts/seed-firestore.ts",
     "functions:build": "npm --prefix functions run build",
     "deploy": "npm run deploy:all",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",

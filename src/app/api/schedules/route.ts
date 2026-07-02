@@ -8,11 +8,14 @@ export const GET = withErrorHandling(async (req: Request) => {
   const date = url.searchParams.get('date');
   const db = getDb();
 
-  const list = db
-    .listSchedules()
-    .filter((s) => s.status === 'scheduled' && (!routeId || s.routeId === routeId) && (!date || s.date === date))
-    .map((s) => {
-      const view = db.getScheduleView(s.id);
+  const schedules = await db.listSchedules();
+  const candidates = schedules.filter(
+    (s) => s.status === 'scheduled' && (!routeId || s.routeId === routeId) && (!date || s.date === date),
+  );
+  const views = await Promise.all(candidates.map((s) => db.getScheduleView(s.id)));
+  const list = candidates
+    .map((s, index) => {
+      const view = views[index];
       return view
         ? {
             scheduleId: s.id,

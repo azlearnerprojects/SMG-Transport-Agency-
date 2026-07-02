@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { Bus, MapPin, Info } from 'lucide-react';
 import { getDb } from '@/lib/db';
 import { generateTicketQr } from '@/lib/qr';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 import { formatCurrency, formatDate, formatTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +17,10 @@ export const metadata: Metadata = { title: 'Your e-ticket', robots: { index: fal
 export default async function TicketPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;
   const db = getDb();
-  const booking = db.getBookingByReference(reference);
+  const [booking, { config: site }] = await Promise.all([
+    db.getBookingByReference(reference),
+    getPublicSiteConfig(),
+  ]);
   if (!booking) notFound();
 
   const confirmed = booking.status === 'confirmed' || booking.status === 'checked_in' || booking.status === 'completed';
@@ -95,15 +98,11 @@ export default async function TicketPage({ params }: { params: Promise<{ referen
           </div>
 
           <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Bus className="size-3.5" /> {BRAND.name}</span>
-            <span>Support: {BRAND.supportPhone} · {BRAND.email}</span>
+            <span className="flex items-center gap-1.5"><Bus className="size-3.5" /> {site.siteName}</span>
+            <span>Support: {site.supportPhone} · {site.supportEmail}</span>
           </div>
         </CardContent>
       </Card>
-
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        Contact and terminal details are placeholders pending confirmation. (Demo data.)
-      </p>
     </div>
   );
 }

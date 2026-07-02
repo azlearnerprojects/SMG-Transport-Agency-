@@ -7,9 +7,9 @@ import type { Announcement } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Announcements' };
 
-export default function AdminAnnouncements() {
+export default async function AdminAnnouncements() {
   const db = getDb();
-  const items = db.listAnnouncements();
+  const items = await db.listAnnouncements();
 
   const cols: Column<Announcement>[] = [
     { key: 'title', header: 'Title', render: (a) => <span className="font-medium text-navy">{a.title}</span> },

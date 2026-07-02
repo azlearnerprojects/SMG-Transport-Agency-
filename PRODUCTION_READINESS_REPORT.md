@@ -193,6 +193,7 @@ Checked but not completed:
 - Firebase deployment: not rerun because this shell is not authenticated for Firebase deployment.
 - Super-admin promotion: rerun after Francis signed in once; still failed because this shell has no valid Admin SDK/ADC credentials.
 - Google Cloud CLI: `gcloud` is not installed or not on PATH in this shell.
+- Service-account JSON: no Admin service-account JSON containing a `private_key` field was found under the user profile outside the repo.
 - Firebase CLI version check: installed `15.19.1`, latest npm version `15.22.4`; update before deploying.
 
 ## Final Local Command Sequence

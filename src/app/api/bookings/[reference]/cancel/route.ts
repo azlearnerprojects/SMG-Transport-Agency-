@@ -10,7 +10,7 @@ export const POST = withErrorHandling(
 
     const { reference } = await ctx.params;
     const db = getDb();
-    const result = db.cancelBooking(reference, 'customer');
+    const result = await db.cancelBooking(reference, 'customer');
     if (!result.ok) return jsonError(result.error ?? 'Could not cancel booking.', 409);
     return jsonOk({ booking: result.booking, refund: result.refund });
   },

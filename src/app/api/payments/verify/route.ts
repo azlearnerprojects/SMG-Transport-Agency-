@@ -19,20 +19,20 @@ async function verifyAndConfirm(providerReference: string, bookingReference?: st
   const provider = getPaymentProvider();
   const result = await provider.verify(providerReference);
 
-  const booking = bookingReference ? db.getBookingByReference(bookingReference) : undefined;
+  const booking = bookingReference ? await db.getBookingByReference(bookingReference) : undefined;
 
   if (result.status !== 'success') {
-    if (bookingReference) db.failPayment(bookingReference, `Payment ${result.status} at provider.`);
+    if (bookingReference) await db.failPayment(bookingReference, `Payment ${result.status} at provider.`);
     return { ok: false as const, status: result.status };
   }
 
   // Amount guard (skip for mock provider which reports 0).
   if (booking && result.amount > 0 && Math.abs(result.amount - booking.total) > 0.01) {
-    if (bookingReference) db.failPayment(bookingReference, 'Paid amount did not match booking total.');
+    if (bookingReference) await db.failPayment(bookingReference, 'Paid amount did not match booking total.');
     return { ok: false as const, status: 'failed' as const };
   }
 
-  const confirm = db.confirmPayment({ providerReference, bookingReference });
+  const confirm = await db.confirmPayment({ providerReference, bookingReference });
   if (!confirm.ok || !confirm.booking) {
     return { ok: false as const, status: 'failed' as const, error: confirm.error };
   }

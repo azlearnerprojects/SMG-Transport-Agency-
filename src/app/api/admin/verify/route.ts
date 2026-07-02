@@ -11,5 +11,5 @@ export const GET = withErrorHandling(async (req: Request) => {
   const ref = new URL(req.url).searchParams.get('ref');
   if (!ref) return jsonError('Provide a booking reference.', 400);
   const db = getDb();
-  return jsonOk({ result: db.verifyTicket(ref) });
+  return jsonOk({ result: await db.verifyTicket(ref) });
 });

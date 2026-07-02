@@ -16,8 +16,11 @@ export function ChatbotWidget() {
   return (
     <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <div id="smg-chatbot-widget" className="h-[min(620px,calc(100vh-6rem))] w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-white/70 bg-white shadow-card-hover sm:w-[390px]">
-          <div className="flex items-center justify-end gap-1 border-b border-border bg-white px-3 py-2">
+        <div
+          id="smg-chatbot-widget"
+          className="flex h-[min(620px,calc(100vh-6rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-white/70 bg-white shadow-card-hover sm:w-[390px]"
+        >
+          <div className="flex shrink-0 items-center justify-end gap-1 border-b border-border bg-white px-3 py-2">
             <Link href="/support/chat" className="grid size-9 place-items-center rounded-md text-navy hover:bg-navy/5" aria-label="Open full chat page">
               <Maximize2 className="size-4" />
             </Link>
@@ -30,7 +33,11 @@ export function ChatbotWidget() {
               <X className="size-4" />
             </button>
           </div>
-          <ChatSurface compact />
+          {/* min-h-0 lets the chat surface shrink inside the flex column so its
+              input bar stays visible instead of being clipped by overflow-hidden. */}
+          <div className="min-h-0 flex-1">
+            <ChatSurface compact />
+          </div>
         </div>
       )}
       <Button

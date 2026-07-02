@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 export default async function SeatPage({ params }: { params: Promise<{ scheduleId: string }> }) {
   const { scheduleId } = await params;
   const db = getDb();
-  const view = db.getScheduleView(scheduleId);
+  const view = await db.getScheduleView(scheduleId);
   if (!view) notFound();
 
-  const statuses = db.seatStatuses(scheduleId);
+  const statuses = await db.seatStatuses(scheduleId);
 
   return (
     <div className="bg-cloud pb-16">

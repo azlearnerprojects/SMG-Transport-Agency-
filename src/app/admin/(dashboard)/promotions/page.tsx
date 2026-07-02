@@ -7,9 +7,9 @@ import type { Promotion } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Promotions' };
 
-export default function AdminPromotions() {
+export default async function AdminPromotions() {
   const db = getDb();
-  const promos = db.listPromotions();
+  const promos = await db.listPromotions();
 
   const cols: Column<Promotion>[] = [
     { key: 'code', header: 'Code', render: (p) => <span className="font-mono font-semibold text-navy">{p.code}</span> },

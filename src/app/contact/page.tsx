@@ -3,14 +3,22 @@ import { Phone, Mail, MapPin, MessageCircle, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { ContactForm } from '@/components/contact-form';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const metadata: Metadata = {
   title: 'Contact',
   description: 'Get in touch with the SMG Transport Agency customer support team.',
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const { config: site } = await getPublicSiteConfig();
+  const socials = [
+    { label: 'Facebook', href: site.socialFacebook },
+    { label: 'Instagram', href: site.socialInstagram },
+    { label: 'X', href: site.socialTwitter },
+    { label: 'TikTok', href: site.socialTiktok },
+  ].filter((s) => s.href);
+
   return (
     <>
       <PageHeader title="Contact us" subtitle="We're here to help with bookings, changes and any questions about your trip." />
@@ -29,24 +37,27 @@ export default function ContactPage() {
           <Card>
             <CardContent className="space-y-4 p-6 text-sm">
               <h3 className="font-heading font-bold text-navy">Reach us directly</h3>
-              <ContactRow icon={Phone} label="Phone" value={BRAND.supportPhone} />
-              <ContactRow icon={MessageCircle} label="WhatsApp" value={BRAND.whatsapp} />
-              <ContactRow icon={Mail} label="Email" value={BRAND.email} />
-              <ContactRow icon={MapPin} label="Office / terminal" value={BRAND.office} />
-              <ContactRow icon={Clock} label="Support hours" value={BRAND.supportHours} />
+              <ContactRow icon={Phone} label="Phone" value={site.supportPhone} />
+              <ContactRow icon={MessageCircle} label="WhatsApp" value={site.supportWhatsapp} />
+              <ContactRow icon={Mail} label="Email" value={site.supportEmail} />
+              <ContactRow icon={MapPin} label="Office / terminal" value={site.companyAddress} />
+              <ContactRow icon={Clock} label="Support hours" value={site.supportHours} />
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-6 text-sm">
-              <h3 className="font-heading font-bold text-navy">Follow us</h3>
-              <div className="mt-3 flex flex-wrap gap-3 text-navy">
-                <a href={BRAND.social.facebook} className="underline">Facebook</a>
-                <a href={BRAND.social.instagram} className="underline">Instagram</a>
-                <a href={BRAND.social.twitter} className="underline">X</a>
-                <a href={BRAND.social.tiktok} className="underline">TikTok</a>
-              </div>
-            </CardContent>
-          </Card>
+          {socials.length > 0 && (
+            <Card>
+              <CardContent className="p-6 text-sm">
+                <h3 className="font-heading font-bold text-navy">Follow us</h3>
+                <div className="mt-3 flex flex-wrap gap-3 text-navy">
+                  {socials.map((s) => (
+                    <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="underline">
+                      {s.label}
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </aside>
       </div>
     </>

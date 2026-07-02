@@ -10,20 +10,19 @@ import { formatCurrency, formatDuration, formatTime } from '@/lib/format';
 
 export const metadata: Metadata = {
   title: 'Routes & Schedules',
-  description: 'Browse SMG intercity routes across Ghana, departure times and fares. (Sample schedule data.)',
+  description: 'Browse SMG intercity routes across Ghana, departure times and fares.',
 };
 
-export default function RoutesPage() {
+export default async function RoutesPage() {
   const db = getDb();
-  const routes = db.listRoutes();
-  const schedules = db.listSchedules();
+  const [routes, schedules] = await Promise.all([db.listRoutes(), db.listSchedules()]);
   const today = new Date().toISOString().slice(0, 10);
 
   return (
     <>
       <PageHeader
         title="Routes & Schedules"
-        subtitle="Explore our intercity connections, departure times and fares. Schedules shown are sample data pending CEO approval."
+        subtitle="Explore our intercity connections, departure times and fares."
       />
       <div className="container-page py-12">
         <div className="grid gap-6 md:grid-cols-2">

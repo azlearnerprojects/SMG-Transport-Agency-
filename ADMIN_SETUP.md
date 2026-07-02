@@ -62,25 +62,25 @@ Admin SDK credentials.
 gcloud --version
 ```
 
-2. Sign in for Application Default Credentials:
+1. Sign in for Application Default Credentials:
 
 ```powershell
 gcloud auth application-default login
 ```
 
-3. Set the Firebase/Google Cloud project:
+1. Set the Firebase/Google Cloud project:
 
 ```powershell
 gcloud config set project smg-transport-agency
 ```
 
-4. Verify ADC can mint a token:
+1. Verify ADC can mint a token:
 
 ```powershell
 gcloud auth application-default print-access-token
 ```
 
-5. Keep the local project env aligned:
+1. Keep the local project env aligned:
 
 ```powershell
 $env:FIREBASE_PROJECT_ID="smg-transport-agency"

@@ -46,9 +46,9 @@ const BUS_PHOTO_BY_ID: Record<string, string> = {
   bus_vip1: VIP_INTERIOR_PHOTO.src,
 };
 
-export default function FleetPage() {
+export default async function FleetPage() {
   const db = getDb();
-  const buses = db.listBuses().filter((b) => b.status !== 'archived');
+  const buses = (await db.listBuses()).filter((b) => b.status !== 'archived');
 
   return (
     <>

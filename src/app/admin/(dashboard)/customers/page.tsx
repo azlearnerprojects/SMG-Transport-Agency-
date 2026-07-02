@@ -6,10 +6,9 @@ import type { AppUser } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Customers' };
 
-export default function AdminCustomers() {
+export default async function AdminCustomers() {
   const db = getDb();
-  const customers = db.listCustomers();
-  const bookings = db.listBookings();
+  const [customers, bookings] = await Promise.all([db.listCustomers(), db.listBookings()]);
 
   const cols: Column<AppUser>[] = [
     { key: 'fullName', header: 'Name' },
@@ -21,7 +20,7 @@ export default function AdminCustomers() {
 
   return (
     <>
-      <AdminPageTitle title="Customers" description={`${customers.length} registered customers (demo data). Guest bookings are tracked by contact detail.`} />
+      <AdminPageTitle title="Customers" description={`${customers.length} registered customers. Guest bookings are tracked by contact detail.`} />
       <DataTable columns={cols} rows={customers} empty="No customers yet." />
     </>
   );

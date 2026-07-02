@@ -11,8 +11,8 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
   const { reference } = z.object({ reference: z.string().min(1) }).parse(await req.json());
   const db = getDb();
-  const result = db.checkIn(reference);
+  const result = await db.checkIn(reference);
   if (!result.ok) return jsonError(result.error ?? 'Check-in failed.', 409);
-  db.addAudit({ actor: session!.email, action: 'checkin', target: reference, detail: 'Passenger checked in' });
+  await db.addAudit({ actor: session!.email, action: 'checkin', target: reference, detail: 'Passenger checked in' });
   return jsonOk({ checkedIn: true });
 });

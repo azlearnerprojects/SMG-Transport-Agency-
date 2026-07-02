@@ -9,14 +9,14 @@ export const metadata: Metadata = { title: 'Admin · Reports' };
 
 const METHOD_LABEL: Record<string, string> = { mobile_money: 'Mobile Money', card: 'Card', bank_transfer: 'Bank transfer' };
 
-export default function AdminReports() {
+export default async function AdminReports() {
   const db = getDb();
-  const r = db.reports();
+  const r = await db.reports();
   const maxRouteRevenue = Math.max(1, ...r.revenueByRoute.map((x) => x.revenue));
 
   return (
     <>
-      <AdminPageTitle title="Reports" description="Revenue, occupancy and booking analytics (demo data)." />
+      <AdminPageTitle title="Reports" description="Revenue, occupancy and booking analytics." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total revenue" value={formatCurrency(r.totalRevenue)} icon={Wallet} />

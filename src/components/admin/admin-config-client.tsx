@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CreditCard, Loader2, Megaphone, Save, Settings2 } from 'lucide-react';
+import { AlertTriangle, Building2, CreditCard, Loader2, Megaphone, Save, Settings2, Share2 } from 'lucide-react';
 import { Alert, Checkbox, Field } from '@/components/ui/misc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,8 +121,14 @@ export function AdminConfigClient({
             <Field label="Site name" htmlFor="siteName" required>
               <Input id="siteName" value={form.siteName} onChange={(e) => set('siteName', e.target.value)} />
             </Field>
+            <Field label="Tagline" htmlFor="tagline" required>
+              <Input id="tagline" value={form.tagline} onChange={(e) => set('tagline', e.target.value)} />
+            </Field>
             <Field label="Support email" htmlFor="supportEmail" required>
               <Input id="supportEmail" type="email" value={form.supportEmail} onChange={(e) => set('supportEmail', e.target.value)} />
+            </Field>
+            <Field label="Support hours" htmlFor="supportHours" required>
+              <Input id="supportHours" value={form.supportHours} onChange={(e) => set('supportHours', e.target.value)} placeholder="e.g. 24/7 or 6am - 9pm" />
             </Field>
             <Field label="Support phone" htmlFor="supportPhone" required>
               <Input id="supportPhone" value={form.supportPhone} onChange={(e) => set('supportPhone', e.target.value)} />
@@ -134,6 +140,26 @@ export function AdminConfigClient({
           <Field label="Company address" htmlFor="companyAddress" required>
             <Textarea id="companyAddress" value={form.companyAddress} onChange={(e) => set('companyAddress', e.target.value)} />
           </Field>
+        </ConfigCard>
+
+        <ConfigCard icon={Share2} title="Social Links">
+          <p className="mb-4 text-xs text-muted-foreground">
+            Shown in the footer and contact page. Leave a field empty to hide that network.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Facebook" htmlFor="socialFacebook">
+              <Input id="socialFacebook" value={form.socialFacebook} onChange={(e) => set('socialFacebook', e.target.value)} placeholder="https://facebook.com/..." />
+            </Field>
+            <Field label="Instagram" htmlFor="socialInstagram">
+              <Input id="socialInstagram" value={form.socialInstagram} onChange={(e) => set('socialInstagram', e.target.value)} placeholder="https://instagram.com/..." />
+            </Field>
+            <Field label="X (Twitter)" htmlFor="socialTwitter">
+              <Input id="socialTwitter" value={form.socialTwitter} onChange={(e) => set('socialTwitter', e.target.value)} placeholder="https://x.com/..." />
+            </Field>
+            <Field label="TikTok" htmlFor="socialTiktok">
+              <Input id="socialTiktok" value={form.socialTiktok} onChange={(e) => set('socialTiktok', e.target.value)} placeholder="https://tiktok.com/@..." />
+            </Field>
+          </div>
         </ConfigCard>
 
         <ConfigCard icon={Settings2} title="Booking Controls">

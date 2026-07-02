@@ -13,7 +13,7 @@ const bodySchema = createBookingSchema.extend({ holdId: z.string().min(1) });
 export const POST = withErrorHandling(async (req: Request) => {
   const body = bodySchema.parse(await req.json());
   const db = getDb();
-  const result = db.createBooking({
+  const result = await db.createBooking({
     scheduleId: body.scheduleId,
     seatIds: body.seatIds,
     seatCategory: body.seatCategory,

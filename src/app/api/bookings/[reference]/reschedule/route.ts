@@ -13,7 +13,7 @@ export const POST = withErrorHandling(
     const { reference } = await ctx.params;
     const body = schema.parse(await req.json());
     const db = getDb();
-    const result = db.rescheduleBooking(reference, body.newScheduleId, body.seatIds, 'customer');
+    const result = await db.rescheduleBooking(reference, body.newScheduleId, body.seatIds, 'customer');
     if (!result.ok) return jsonError(result.error ?? 'Could not reschedule.', 409);
     return jsonOk({ booking: result.booking });
   },

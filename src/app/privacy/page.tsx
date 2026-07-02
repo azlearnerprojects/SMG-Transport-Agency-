@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How SMG collects, uses and protects your personal data.',
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const { config: site } = await getPublicSiteConfig();
   return (
     <LegalContent
       title="Privacy Policy"
@@ -58,7 +59,7 @@ export default function PrivacyPage() {
         {
           heading: 'Contact',
           paragraphs: [
-            `Privacy questions can be sent to ${BRAND.email} or raised through the Contact page.`,
+            `Privacy questions can be sent to ${site.supportEmail} or raised through the Contact page.`,
           ],
         },
       ]}

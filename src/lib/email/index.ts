@@ -1,5 +1,5 @@
 import { logger } from '@/lib/logger';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 import type { Booking } from '@/lib/types';
 import { buildVerificationUrl } from '@/lib/qr';
 
@@ -21,10 +21,11 @@ function smtpConfigured(): boolean {
  */
 export async function sendEmail(message: EmailMessage): Promise<{ delivered: boolean }> {
   if (!smtpConfigured()) {
-    logger.info('Email (demo, not delivered)', { to: message.to, subject: message.subject });
+    logger.info('Email (SMTP not configured, not delivered)', { to: message.to, subject: message.subject });
     return { delivered: false };
   }
   try {
+    const { config: site } = await getPublicSiteConfig();
     const nodemailer = await import('nodemailer');
     const transport = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -33,7 +34,7 @@ export async function sendEmail(message: EmailMessage): Promise<{ delivered: boo
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
     });
     await transport.sendMail({
-      from: process.env.SMTP_FROM_EMAIL ?? BRAND.email,
+      from: process.env.SMTP_FROM_EMAIL ?? site.supportEmail,
       to: message.to,
       subject: message.subject,
       html: message.html,
@@ -48,9 +49,10 @@ export async function sendEmail(message: EmailMessage): Promise<{ delivered: boo
 
 /** Compose and send the e-ticket / receipt email for a confirmed booking. */
 export async function sendTicketEmail(booking: Booking): Promise<{ delivered: boolean }> {
+  const { config: site } = await getPublicSiteConfig();
   const verifyUrl = buildVerificationUrl(booking.reference);
   const text = [
-    `Thank you for booking with ${BRAND.name}!`,
+    `Thank you for booking with ${site.siteName}!`,
     ``,
     `Booking reference: ${booking.reference}`,
     `Ticket number: ${booking.ticketNumber}`,
@@ -67,7 +69,7 @@ export async function sendTicketEmail(booking: Booking): Promise<{ delivered: bo
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto">
       <div style="background:#003366;color:#fff;padding:16px 20px;border-radius:8px 8px 0 0">
-        <strong style="font-size:18px">${BRAND.name}</strong> — E-Ticket
+        <strong style="font-size:18px">${site.siteName}</strong> — E-Ticket
       </div>
       <div style="border:1px solid #eee;border-top:0;padding:20px;border-radius:0 0 8px 8px">
         <p>Thank you for booking with us. Your trip is confirmed.</p>

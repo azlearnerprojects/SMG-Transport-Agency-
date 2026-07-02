@@ -357,10 +357,16 @@ export type ChatbotTone = 'friendly' | 'professional' | 'concise' | 'playful';
 
 export interface PublicSiteConfig {
   siteName: string;
+  tagline: string;
   supportPhone: string;
   supportWhatsapp: string;
   supportEmail: string;
+  supportHours: string;
   companyAddress: string;
+  socialFacebook: string;
+  socialInstagram: string;
+  socialTwitter: string;
+  socialTiktok: string;
   bookingEnabled: boolean;
   maintenanceMode: boolean;
   bookingOpeningEnabled: boolean;

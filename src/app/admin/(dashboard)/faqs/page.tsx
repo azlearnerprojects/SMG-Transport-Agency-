@@ -6,9 +6,9 @@ import type { FaqItem } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · FAQs' };
 
-export default function AdminFaqs() {
+export default async function AdminFaqs() {
   const db = getDb();
-  const faqs = db.listAllFaqs().sort((a, b) => a.order - b.order);
+  const faqs = (await db.listAllFaqs()).sort((a, b) => a.order - b.order);
 
   const cols: Column<FaqItem>[] = [
     { key: 'order', header: '#', className: 'w-12' },

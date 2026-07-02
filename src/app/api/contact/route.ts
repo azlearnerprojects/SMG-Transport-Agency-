@@ -19,7 +19,7 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
 
   const db = getDb();
-  const message = db.addSupportMessage({
+  const message = await db.addSupportMessage({
     name: body.name,
     email: body.email,
     phone: body.phone || undefined,

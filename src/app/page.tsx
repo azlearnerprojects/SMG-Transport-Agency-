@@ -14,19 +14,28 @@ import {
   MapPin,
 } from 'lucide-react';
 import { getDb } from '@/lib/db';
-import { BRAND } from '@/lib/config';
+import { getPublicSiteConfig } from '@/lib/site-config';
 import { formatCurrency } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SearchCard } from '@/components/booking/search-card';
 
-export default function HomePage() {
+export default async function HomePage() {
   const db = getDb();
-  const cities = db.getCities();
-  const routes = db.listRoutes();
-  const schedules = db.listSchedules();
-  const faqs = db.listFaqs().slice(0, 4);
+  const [cities, routes, schedules, allFaqs, promotions, { config: site }] = await Promise.all([
+    db.getCities(),
+    db.listRoutes(),
+    db.listSchedules(),
+    db.listFaqs(),
+    db.listPromotions(),
+    getPublicSiteConfig(),
+  ]);
+  const faqs = allFaqs.slice(0, 4);
+  const now = Date.now();
+  const activePromo = promotions.find(
+    (p) => p.active && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now,
+  );
 
   // Starting price per popular route = lowest standard fare across its schedules.
   const popular = routes
@@ -45,7 +54,7 @@ export default function HomePage() {
           <div className="animate-fade-in">
             <Badge variant="gold" className="mb-4">Youth-driven • Ghana</Badge>
             <h1 className="font-heading text-4xl font-extrabold leading-tight text-white md:text-5xl">
-              {BRAND.tagline}
+              {site.tagline}
             </h1>
             <p className="mt-4 max-w-xl text-lg text-white/80">
               Book affordable and comfortable trips across Ghana with real-time seat selection and
@@ -68,7 +77,7 @@ export default function HomePage() {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="text-2xl font-extrabold md:text-3xl">Popular routes</h2>
-            <p className="mt-2 text-muted-foreground">Frequently travelled intercity connections. (Sample routes.)</p>
+            <p className="mt-2 text-muted-foreground">Frequently travelled intercity connections.</p>
           </div>
           <Link href="/routes" className="hidden sm:block">
             <Button variant="outline" size="sm">View all routes <ArrowRight className="size-4" /></Button>
@@ -183,47 +192,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PROMO BANNER */}
-      <section className="container-page py-14">
-        <div className="overflow-hidden rounded-xl bg-gold">
-          <div className="flex flex-col items-start justify-between gap-4 p-8 md:flex-row md:items-center">
-            <div>
-              <h3 className="font-heading text-2xl font-extrabold text-navy">Early Bird — save 15%</h3>
-              <p className="mt-1 text-navy/80">Book ahead with code <strong>EARLYBIRD</strong> and save on the base fare. (Sample promotion.)</p>
+      {/* PROMO BANNER (driven by the active promotion managed in the admin panel) */}
+      {activePromo && (
+        <section className="container-page py-14">
+          <div className="overflow-hidden rounded-xl bg-gold">
+            <div className="flex flex-col items-start justify-between gap-4 p-8 md:flex-row md:items-center">
+              <div>
+                <h3 className="font-heading text-2xl font-extrabold text-navy">{activePromo.title}</h3>
+                <p className="mt-1 text-navy/80">
+                  Use code <strong>{activePromo.code}</strong> at checkout. {activePromo.description}
+                </p>
+              </div>
+              <Link href="/promotions"><Button variant="navy" size="lg">See all promotions</Button></Link>
             </div>
-            <Link href="/promotions"><Button variant="navy" size="lg">See all promotions</Button></Link>
           </div>
-        </div>
-      </section>
-
-      {/* TESTIMONIALS (placeholder) */}
-      <section className="bg-cloud py-14">
-        <div className="container-page">
-          <h2 className="text-center text-2xl font-extrabold md:text-3xl">What travellers say</h2>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            Placeholder testimonials — to be replaced with real, consented customer reviews before launch.
-          </p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              { name: 'A. M.', city: 'Cape Coast', quote: 'Booking took less than two minutes and I picked my exact seat. Smooth trip to Accra.' },
-              { name: 'K. B.', city: 'Kumasi', quote: 'Paying with Mobile Money was easy and my e-ticket arrived instantly. Will book again.' },
-              { name: 'Y. A.', city: 'Takoradi', quote: 'Clean, comfortable bus and friendly staff. The whole experience felt professional.' },
-            ].map((t) => (
-              <Card key={t.name}>
-                <CardContent className="p-6">
-                  <div className="flex gap-0.5 text-gold">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className="size-4 fill-gold" />
-                    ))}
-                  </div>
-                  <p className="mt-3 text-sm text-navy/80">&ldquo;{t.quote}&rdquo;</p>
-                  <p className="mt-4 text-sm font-semibold text-navy">{t.name} · {t.city}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* MOBILE EXPERIENCE */}
       <section className="container-page py-14">
@@ -283,7 +267,9 @@ export default function HomePage() {
           <CardContent className="flex flex-col items-center justify-between gap-4 p-8 text-center md:flex-row md:text-left">
             <div>
               <h3 className="font-heading text-xl font-bold text-white">Need help with a booking?</h3>
-              <p className="mt-1 text-white/75">Our customer support team is here for you. (Contact details are placeholders.)</p>
+              <p className="mt-1 text-white/75">
+                Our customer support team is here for you {site.supportHours}. Call {site.supportPhone}.
+              </p>
             </div>
             <div className="flex gap-3">
               <Link href="/contact"><Button>Contact us</Button></Link>

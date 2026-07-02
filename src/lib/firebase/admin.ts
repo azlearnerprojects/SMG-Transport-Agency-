@@ -9,11 +9,15 @@ export function isAdminConfigured(): boolean {
   const hasInlineServiceAccount = Boolean(
     process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY,
   );
+  // FIREBASE_PROJECT_ID alone implies Application Default Credentials are
+  // expected (gcloud ADC file, GOOGLE_APPLICATION_CREDENTIALS, or the
+  // metadata server when deployed on Firebase/Cloud Functions).
   const hasApplicationDefault = Boolean(
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
       process.env.GCLOUD_PROJECT ||
       process.env.GCP_PROJECT ||
-      process.env.FIREBASE_CONFIG,
+      process.env.FIREBASE_CONFIG ||
+      process.env.FIREBASE_PROJECT_ID,
   );
   return hasInlineServiceAccount || hasApplicationDefault;
 }

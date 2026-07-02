@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default async function ReviewPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;
   const db = getDb();
-  const booking = db.getBookingByReference(reference);
+  const booking = await db.getBookingByReference(reference);
   if (!booking) notFound();
   if (booking.status === 'confirmed') redirect(`/ticket/${booking.reference}`);
 

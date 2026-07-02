@@ -1,7 +1,9 @@
+// Relative imports (not @/ aliases) so node scripts (seed/admin CLIs) can load
+// this module through tsx without alias resolution.
 import { z } from 'zod';
-import { BRAND } from '@/lib/config';
-import { getAdminFirestore } from '@/lib/firebase/admin';
-import type { ChatbotRuntimeConfig, PublicSiteConfig } from '@/lib/types';
+import { BRAND } from './config';
+import { getAdminFirestore } from './firebase/admin';
+import type { ChatbotRuntimeConfig, PublicSiteConfig } from './types';
 
 const nowIso = () => new Date().toISOString();
 
@@ -11,10 +13,16 @@ export const chatbotTones = ['friendly', 'professional', 'concise', 'playful'] a
 
 export const DEFAULT_PUBLIC_SITE_CONFIG: PublicSiteConfig = {
   siteName: BRAND.name,
+  tagline: BRAND.tagline,
   supportPhone: BRAND.supportPhone,
   supportWhatsapp: BRAND.whatsapp,
   supportEmail: BRAND.email,
+  supportHours: BRAND.supportHours,
   companyAddress: BRAND.office,
+  socialFacebook: BRAND.social.facebook,
+  socialInstagram: BRAND.social.instagram,
+  socialTwitter: BRAND.social.twitter,
+  socialTiktok: BRAND.social.tiktok,
   bookingEnabled: true,
   maintenanceMode: false,
   bookingOpeningEnabled: true,
@@ -63,12 +71,27 @@ const contact = z
 
 const text = (max = 300) => z.string().trim().max(max);
 
+/** Social links may be blank; when set they must be full http(s) URLs. */
+const optionalUrl = z
+  .string()
+  .trim()
+  .max(200)
+  .refine((value) => value === '' || /^https?:\/\/\S+$/i.test(value), {
+    message: 'Use a full URL starting with https:// or leave the field empty.',
+  });
+
 export const publicSiteConfigSchema = z.object({
   siteName: text(80).min(2),
+  tagline: text(140).min(4),
   supportPhone: contact,
   supportWhatsapp: contact,
   supportEmail: z.string().trim().email(),
+  supportHours: text(60).min(2),
   companyAddress: text(240).min(4),
+  socialFacebook: optionalUrl,
+  socialInstagram: optionalUrl,
+  socialTwitter: optionalUrl,
+  socialTiktok: optionalUrl,
   bookingEnabled: z.boolean(),
   maintenanceMode: z.boolean(),
   bookingOpeningEnabled: z.boolean(),
@@ -107,7 +130,11 @@ export const chatbotRuntimeConfigSchema = z.object({
 const g = globalThis as unknown as {
   __smgPublicSiteConfig?: PublicSiteConfig;
   __smgChatbotRuntimeConfig?: ChatbotRuntimeConfig;
+  __smgPublicSiteConfigCache?: { at: number; result: { configured: boolean; config: PublicSiteConfig } };
 };
+
+/** Server-side read cache so every page render does not hit Firestore. */
+const CONFIG_CACHE_TTL_MS = 15_000;
 
 function mergePublicConfig(data: Record<string, unknown> | undefined): PublicSiteConfig {
   return {
@@ -131,7 +158,12 @@ function mergeRuntimeConfig(data: Record<string, unknown> | undefined): ChatbotR
   } as ChatbotRuntimeConfig;
 }
 
-export async function getPublicSiteConfig(): Promise<{ configured: boolean; config: PublicSiteConfig }> {
+export async function getPublicSiteConfig(options?: { fresh?: boolean }): Promise<{ configured: boolean; config: PublicSiteConfig }> {
+  const cached = g.__smgPublicSiteConfigCache;
+  if (!options?.fresh && cached && Date.now() - cached.at < CONFIG_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
   const firestore = await getAdminFirestore();
   if (!firestore) {
     g.__smgPublicSiteConfig ??= DEFAULT_PUBLIC_SITE_CONFIG;
@@ -139,7 +171,9 @@ export async function getPublicSiteConfig(): Promise<{ configured: boolean; conf
   }
 
   const snap = await firestore.collection('siteConfig').doc('public').get();
-  return { configured: true, config: mergePublicConfig(snap.data()) };
+  const result = { configured: true, config: mergePublicConfig(snap.data()) };
+  g.__smgPublicSiteConfigCache = { at: Date.now(), result };
+  return result;
 }
 
 export async function updatePublicSiteConfig(
@@ -160,6 +194,7 @@ export async function updatePublicSiteConfig(
   }
 
   await firestore.collection('siteConfig').doc('public').set(updated, { merge: true });
+  g.__smgPublicSiteConfigCache = { at: Date.now(), result: { configured: true, config: updated } };
   if (audit) {
     await firestore.collection('auditLogs').add({
       action: 'update_site_config',

@@ -75,10 +75,14 @@ async function main() {
   } catch (err) {
     const code = typeof err === 'object' && err && 'code' in err ? String(err.code) : '';
     if (code === 'auth/user-not-found') {
-      console.error(`No Firebase Auth user exists for ${email}. Ask Francis to sign in with Google once, then rerun this script.`);
-      process.exit(1);
+      // Pre-provision the account. When Francis signs in with Google using the
+      // same email, Firebase links the Google provider to this account and the
+      // custom claims below apply immediately.
+      console.log(`No Auth user for ${email} yet — creating the account now.`);
+      user = await auth.createUser({ email, displayName: 'Francis Pwavwe', emailVerified: true });
+    } else {
+      throw err;
     }
-    throw err;
   }
 
   await auth.setCustomUserClaims(user.uid, {

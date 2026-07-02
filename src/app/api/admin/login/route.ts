@@ -111,11 +111,17 @@ export const POST = withErrorHandling(async (req: Request) => {
     return jsonOk({ email: decodedEmail, role: effectiveRole, name: profile.displayName });
   }
 
+  // Email/password staff login exists for DEMO mode only. In production the
+  // sole path is Google sign-in verified above via the Firebase Admin SDK.
+  if (!DEMO_MODE) {
+    return jsonError('Password login is disabled. Please sign in with Google.', 403);
+  }
+
   if (!email || !password) return jsonError('Provide staff email and password.', 400);
-  const demoPassword = process.env.DEMO_ADMIN_PASSWORD ?? (DEMO_MODE ? 'Demo!Admin2026' : undefined);
+  const demoPassword = process.env.DEMO_ADMIN_PASSWORD ?? 'Demo!Admin2026';
 
   const db = getDb();
-  const staff = db.listStaff().find((s) => s.email.toLowerCase() === email.trim().toLowerCase() && s.active);
+  const staff = (await db.listStaff()).find((s) => s.email.toLowerCase() === email.trim().toLowerCase() && s.active);
 
   if (!staff || !demoPassword || password !== demoPassword) {
     logger.warn('Failed admin login', { email });
@@ -123,6 +129,6 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
 
   await setStaffSession({ email: staff.email, role: staff.role, name: staff.fullName });
-  db.addAudit({ actor: staff.email, action: 'login', target: 'admin', detail: `Role: ${staff.role}` });
+  await db.addAudit({ actor: staff.email, action: 'login', target: 'admin', detail: `Role: ${staff.role}` });
   return jsonOk({ email: staff.email, role: staff.role, name: staff.fullName });
 });

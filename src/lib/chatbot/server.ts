@@ -1,4 +1,3 @@
-import { DEMO_MODE } from '@/lib/config';
 import { getDb } from '@/lib/db';
 import { getAdminFirestore } from '@/lib/firebase/admin';
 import { generateId } from '@/lib/ids';
@@ -31,62 +30,38 @@ function cleanMessage(value: string): string {
 }
 
 async function loadKnowledge(): Promise<KnowledgeContext> {
-  if (DEMO_MODE) {
+  try {
     const db = getDb();
+    const [routes, schedules, faqs, settings, announcements] = await Promise.all([
+      db.listRoutes(),
+      db.listSchedules(),
+      db.listFaqs(),
+      db.getSettings(),
+      db.listAnnouncements(),
+    ]);
+    const routeById = new Map(routes.map((route) => [route.id, route]));
+    const today = new Date().toISOString().slice(0, 10);
     return {
-      routes: db.listRoutes().map((route) => `${route.origin} to ${route.destination} (${Math.round(route.durationMinutes / 60)}h approx.)`),
-      schedules: db
-        .listSchedules()
+      routes: routes.map((route) => `${route.origin} to ${route.destination} (${Math.round(route.durationMinutes / 60)}h approx.)`),
+      schedules: schedules
+        .filter((schedule) => schedule.status === 'scheduled' && schedule.date >= today)
         .slice(0, 8)
         .map((schedule) => {
-          const route = db.getRoute(schedule.routeId);
+          const route = routeById.get(schedule.routeId);
           return route ? `${route.origin} to ${route.destination} on ${schedule.date} at ${schedule.departureTime}` : '';
         })
         .filter(Boolean),
-      faqs: db.listFaqs().map((faq) => `${faq.question}: ${faq.answer}`),
+      faqs: faqs.map((faq) => `${faq.question}: ${faq.answer}`),
       policies: [
-        `Cancellations close ${db.settings.cancellationCutoffHours} hours before departure.`,
-        `Rescheduling closes ${db.settings.reschedulingCutoffHours} hours before departure.`,
+        `Cancellations close ${settings.cancellationCutoffHours} hours before departure.`,
+        `Rescheduling closes ${settings.reschedulingCutoffHours} hours before departure.`,
       ],
-      announcements: db.listAnnouncements().map((item) => `${item.title}: ${item.body}`),
+      announcements: announcements.map((item) => `${item.title}: ${item.body}`),
     };
-  }
-
-  const firestore = await getAdminFirestore();
-  if (!firestore) {
+  } catch {
+    // Knowledge is best-effort: the chatbot still answers with escalation info.
     return { routes: [], schedules: [], faqs: [], policies: [], announcements: [] };
   }
-
-  const [routes, schedules, faqs, policies, announcements] = await Promise.all([
-    firestore.collection('routes').limit(12).get(),
-    firestore.collection('schedules').limit(12).get(),
-    firestore.collection('faqs').limit(12).get(),
-    firestore.collection('policies').limit(8).get(),
-    firestore.collection('announcements').limit(6).get(),
-  ]);
-
-  return {
-    routes: routes.docs.filter((doc) => doc.get('active') !== false).map((doc) => {
-      const data = doc.data();
-      return `${data.origin ?? data.departureCity ?? 'Unknown'} to ${data.destination ?? data.destinationCity ?? 'Unknown'}${data.baseFare ? `, from GHS ${data.baseFare}` : ''}`;
-    }),
-    schedules: schedules.docs.filter((doc) => doc.get('active') !== false).map((doc) => {
-      const data = doc.data();
-      return `${data.routeId ?? 'Route'} departs ${data.departureTime ?? 'time TBC'}${data.availableSeats !== undefined ? `, ${data.availableSeats} seats available` : ''}`;
-    }),
-    faqs: faqs.docs.filter((doc) => doc.get('active') !== false).map((doc) => {
-      const data = doc.data();
-      return `${data.question ?? 'FAQ'}: ${data.answer ?? ''}`;
-    }),
-    policies: policies.docs.filter((doc) => doc.get('active') !== false).map((doc) => {
-      const data = doc.data();
-      return `${data.title ?? data.category ?? 'Policy'}: ${data.body ?? ''}`;
-    }),
-    announcements: announcements.docs.filter((doc) => doc.get('active') !== false).map((doc) => {
-      const data = doc.data();
-      return `${data.title ?? 'Announcement'}: ${data.body ?? ''}`;
-    }),
-  };
 }
 
 function formatContext(context: KnowledgeContext): string {

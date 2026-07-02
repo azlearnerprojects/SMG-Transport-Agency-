@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: 'Admin · Payments' };
 
 const METHOD_LABEL: Record<string, string> = { mobile_money: 'Mobile Money', card: 'Card', bank_transfer: 'Bank transfer' };
 
-export default function AdminPayments() {
+export default async function AdminPayments() {
   const db = getDb();
-  const payments = db.listPayments();
+  const payments = await db.listPayments();
   const total = payments.filter((p) => p.status === 'successful').reduce((s, p) => s + p.amount, 0);
 
   const csv = payments.map((p) => ({

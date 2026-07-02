@@ -9,9 +9,9 @@ import type { Booking } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Bookings' };
 
-export default function AdminBookings() {
+export default async function AdminBookings() {
   const db = getDb();
-  const bookings = db.listBookings();
+  const bookings = await db.listBookings();
 
   const csv = bookings.map((b) => ({
     reference: b.reference,

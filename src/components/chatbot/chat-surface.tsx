@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert } from '@/components/ui/misc';
 import { getFirebaseAuth, getFirebaseFunctions } from '@/lib/firebase/client';
 import { useCustomerAuth } from '@/lib/auth/customer-auth';
+import { BRAND } from '@/lib/config';
 import type { PublicSiteConfig } from '@/lib/types';
 
 interface ChatLine {
@@ -51,7 +52,8 @@ export function ChatSurface({ compact = false }: { compact?: boolean }) {
   const scroller = useRef<HTMLDivElement>(null);
 
   const welcome = config?.chatbotWelcomeMessage || DEFAULT_WELCOME;
-  const contact = config?.chatbotEscalationContact || '+233543199401';
+  // Until the live config loads, fall back to the built-in brand default.
+  const contact = config?.chatbotEscalationContact || BRAND.whatsapp;
   const chatbotEnabled = config?.chatbotEnabled ?? true;
 
   useEffect(() => {

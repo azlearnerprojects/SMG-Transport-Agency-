@@ -13,28 +13,26 @@ export default async function AdminAudit() {
   if (session?.role !== 'super_admin') return <RestrictedNotice module="Audit Logs" />;
 
   const firestore = await getAdminFirestore();
-  let logs: AuditLog[];
+  const db = getDb();
+  // Operational audit trail (check-ins, settings changes) + role/config audit logs.
+  let logs: AuditLog[] = await db.listAuditLogs().catch(() => []);
 
   if (firestore) {
     const snapshot = await firestore.collection('auditLogs').get();
-    logs = snapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        const previousValue = data.previousValue ? JSON.stringify(data.previousValue) : 'none';
-        const newValue = data.newValue ? JSON.stringify(data.newValue) : 'none';
-        return {
-          id: doc.id,
-          at: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
-          actor: String(data.performedByEmail ?? 'system'),
-          action: String(data.action ?? 'audit'),
-          target: String(data.targetEmail ?? data.targetUid ?? 'unknown'),
-          detail: `${previousValue} -> ${newValue}`,
-        };
-      })
-      .sort((a, b) => b.at.localeCompare(a.at));
-  } else {
-    const db = getDb();
-    logs = db.listAuditLogs();
+    const roleLogs = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const previousValue = data.previousValue ? JSON.stringify(data.previousValue) : 'none';
+      const newValue = data.newValue ? JSON.stringify(data.newValue) : 'none';
+      return {
+        id: doc.id,
+        at: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
+        actor: String(data.performedByEmail ?? 'system'),
+        action: String(data.action ?? 'audit'),
+        target: String(data.targetEmail ?? data.targetUid ?? data.targetId ?? 'unknown'),
+        detail: `${previousValue} -> ${newValue}`,
+      };
+    });
+    logs = [...logs, ...roleLogs].sort((a, b) => b.at.localeCompare(a.at));
   }
 
   const cols: Column<AuditLog>[] = [

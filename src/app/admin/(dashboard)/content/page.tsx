@@ -8,9 +8,9 @@ import type { ContentPage } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Website Content' };
 
-export default function AdminContent() {
+export default async function AdminContent() {
   const db = getDb();
-  const pages = db.listContentPages();
+  const pages = await db.listContentPages();
 
   const cols: Column<ContentPage>[] = [
     { key: 'title', header: 'Title', render: (p) => <span className="font-medium text-navy">{p.title}</span> },

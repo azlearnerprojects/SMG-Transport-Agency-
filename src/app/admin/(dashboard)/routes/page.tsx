@@ -8,9 +8,9 @@ import type { Route } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Admin · Routes' };
 
-export default function AdminRoutes() {
+export default async function AdminRoutes() {
   const db = getDb();
-  const routes = db.listRoutes();
+  const routes = await db.listRoutes();
   const csv = routes.map((r) => ({ code: r.code, origin: r.origin, destination: r.destination, distanceKm: r.distanceKm, durationMinutes: r.durationMinutes, popular: r.popular }));
 
   const cols: Column<Route>[] = [
@@ -24,7 +24,7 @@ export default function AdminRoutes() {
 
   return (
     <>
-      <AdminPageTitle title="Routes" description="Boarding points, destinations and journey times. (Sample routes pending CEO approval.)" action={<CsvButton filename="smg-routes" rows={csv} />} />
+      <AdminPageTitle title="Routes" description="Boarding points, destinations and journey times." action={<CsvButton filename="smg-routes" rows={csv} />} />
       <DataTable columns={cols} rows={routes} empty="No routes." />
     </>
   );

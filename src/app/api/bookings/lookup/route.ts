@@ -16,11 +16,11 @@ export const POST = withErrorHandling(async (req: Request) => {
   }
   const body = bookingLookupSchema.parse(await req.json());
   const db = getDb();
-  const booking = db.lookupBooking(body.reference, body.contact);
+  const booking = await db.lookupBooking(body.reference, body.contact);
   if (!booking) {
     // Deliberately vague so we don't confirm whether a reference exists.
     return jsonError('No booking found for that reference and contact detail.', 404);
   }
-  const quote = db.cancellationQuote(booking.reference);
+  const quote = await db.cancellationQuote(booking.reference);
   return jsonOk({ booking, quote });
 });

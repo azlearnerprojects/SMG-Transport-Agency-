@@ -12,10 +12,11 @@ export default async function AdminSettings() {
     return <RestrictedNotice module="System Settings" />;
   }
   const db = getDb();
+  const settings = await db.getSettings();
   return (
     <>
       <AdminPageTitle title="System Settings" description="Configurable booking, cancellation and seat-hold policy values." />
-      <SettingsForm initial={db.settings} />
+      <SettingsForm initial={settings} />
     </>
   );
 }

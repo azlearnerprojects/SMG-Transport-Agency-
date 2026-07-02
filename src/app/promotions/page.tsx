@@ -10,16 +10,16 @@ import { formatDate } from '@/lib/format';
 
 export const metadata: Metadata = {
   title: 'Promotions',
-  description: 'Current SMG travel offers and discount codes. (Sample promotions.)',
+  description: 'Current SMG travel offers and discount codes.',
 };
 
-export default function PromotionsPage() {
+export default async function PromotionsPage() {
   const db = getDb();
-  const promos = db.listPromotions().filter((p) => p.active);
+  const promos = (await db.listPromotions()).filter((p) => p.active);
 
   return (
     <>
-      <PageHeader title="Promotions" subtitle="Save on your next trip with our current offers. Sample promotions for demonstration." />
+      <PageHeader title="Promotions" subtitle="Save on your next trip with our current offers." />
       <div className="container-page py-12">
         {promos.length === 0 ? (
           <p className="text-muted-foreground">No active promotions right now. Check back soon!</p>
