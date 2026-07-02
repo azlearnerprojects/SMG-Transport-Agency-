@@ -1,12 +1,13 @@
 import type { AccountStatus, AuthRole, StaffRole } from '@/lib/types';
 
-export const AUTH_ROLES: AuthRole[] = ['super_admin', 'admin', 'staff', 'customer', 'staff_pending'];
+export const AUTH_ROLES: AuthRole[] = ['super_admin', 'admin', 'staff', 'support_agent', 'customer', 'staff_pending'];
 export const ACCOUNT_STATUSES: AccountStatus[] = ['active', 'pending', 'disabled'];
 
 export const ROLE_LABELS: Record<StaffRole | AuthRole, string> = {
   super_admin: 'Super Admin',
   admin: 'Admin',
   staff: 'Staff',
+  support_agent: 'Support Agent',
   customer: 'Customer',
   staff_pending: 'Staff Pending',
   operations_manager: 'Operations Manager',
@@ -38,6 +39,7 @@ export function isAdminRole(role: StaffRole | AuthRole | null | undefined): bool
 export function canUseStaffDashboard(role: StaffRole | AuthRole | null | undefined): boolean {
   return (
     isAdminRole(role) ||
+    role === 'support_agent' ||
     role === 'operations_manager' ||
     role === 'booking_officer' ||
     role === 'customer_support' ||

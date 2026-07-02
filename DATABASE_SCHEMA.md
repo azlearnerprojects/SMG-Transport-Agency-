@@ -26,10 +26,16 @@ the production Firestore collections.
 | `announcements` | Customer notices | `title`, `body`, `level`, `active`, `publishedAt` |
 | `contentPages` | CMS content | `slug`, `title`, `body`, `published` |
 | `faqs` | FAQ entries | `question`, `answer`, `category`, `order`, `published` |
+| `policies` | Travel/support policies for chatbot and site content | `title`, `body`, `category`, `active`, `createdAt`, `updatedAt` |
 | `supportMessages` | Contact-form submissions | `name`, `email`, `phone?`, `subject`, `message`, `status` |
 | `notifications` | User notifications | `userId`, `type`, payload |
 | `systemSettings` | Configurable policy | cancellation/reschedule cut-offs, fee %, max reschedules, refund days, seat-hold TTL |
-| `auditLogs` | Append-only staff actions and role changes | `action`, `performedByUid`, `performedByEmail`, `targetUid`, `targetEmail`, `previousValue`, `newValue`, `createdAt` |
+| `siteConfig/public` | Safe browser-readable runtime settings | support contacts, booking flags, public Paystack key, announcement banner, chatbot public settings |
+| `siteConfig/private` | Server/admin-only config container | chatbot runtime mirror; prefer Functions env or Secret Manager for true secrets |
+| `remoteConfigDrafts` | Remote Config change audit/drafts | `values`, `reason`, `status`, `createdByUid`, `createdByEmail`, `createdAt` |
+| `chatSessions` | Chatbot support sessions | `uid`, `anonymousId`, `status`, `createdAt`, `updatedAt`, `resolvedBy` |
+| `chatSessions/{sessionId}/messages` | Chatbot messages | `sessionId`, `role`, `content`, `createdAt`, `status`, `error?` |
+| `auditLogs` | Append-only staff actions and role/config changes | `action`, `performedByUid`, `performedByEmail`, `targetType`, `targetId`, `targetUid?`, `targetEmail?`, `previousValue`, `newValue`, `createdAt` |
 
 All records carry `createdAt` / `updatedAt` (ISO strings) where appropriate.
 

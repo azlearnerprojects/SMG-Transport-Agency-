@@ -53,6 +53,7 @@ export type AuthRole =
   | 'super_admin'
   | 'admin'
   | 'staff'
+  | 'support_agent'
   | 'customer'
   | 'staff_pending';
 
@@ -62,6 +63,7 @@ export type StaffRole =
   | 'super_admin'
   | 'admin'
   | 'staff'
+  | 'support_agent'
   | 'operations_manager'
   | 'booking_officer'
   | 'customer_support'
@@ -348,4 +350,76 @@ export interface SystemSettings {
   refundProcessingDays: number;
   nonRefundableFareCategories: string[];
   seatHoldTtlSeconds: number;
+}
+
+export type PaymentGatewayMode = 'test' | 'live';
+export type ChatbotTone = 'friendly' | 'professional' | 'concise' | 'playful';
+
+export interface PublicSiteConfig {
+  siteName: string;
+  supportPhone: string;
+  supportWhatsapp: string;
+  supportEmail: string;
+  companyAddress: string;
+  bookingEnabled: boolean;
+  maintenanceMode: boolean;
+  bookingOpeningEnabled: boolean;
+  cancellationWindowHours: number;
+  reschedulingWindowHours: number;
+  defaultCurrency: string;
+  defaultTimezone: string;
+  serviceFee: number;
+  taxPercentage: number;
+  featuredRoutes: string[];
+  announcementBannerEnabled: boolean;
+  announcementBannerText: string;
+  emergencyTravelNotice: string;
+  paymentGatewayMode: PaymentGatewayMode;
+  paystackPublicKey: string;
+  smsProviderEnabled: boolean;
+  emailProviderEnabled: boolean;
+  chatbotEnabled: boolean;
+  chatbotEscalationContact: string;
+  chatbotResponseTone: ChatbotTone;
+  chatbotWelcomeMessage: string;
+  updatedAt: string;
+}
+
+export interface ChatbotRuntimeConfig {
+  enabled: boolean;
+  modelName: string;
+  temperature: number;
+  maxOutputTokens: number;
+  systemPromptVersion: string;
+  welcomeMessage: string;
+  escalationEnabled: boolean;
+  escalationWhatsapp: string;
+  responseTone: ChatbotTone;
+  updatedAt: string;
+}
+
+export interface ChatSession extends Timestamps {
+  id: string;
+  uid?: string;
+  anonymousId?: string;
+  status: 'open' | 'resolved' | 'escalated' | 'errored';
+  resolvedBy?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+  status: 'sent' | 'failed';
+  error?: string;
+}
+
+export interface PolicyItem extends Timestamps {
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  active: boolean;
 }

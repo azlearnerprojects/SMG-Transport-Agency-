@@ -6,19 +6,34 @@
  * tokens and write privileged Firestore fields.
  */
 export function isAdminConfigured(): boolean {
-  return Boolean(
-    process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY,
+  const hasInlineServiceAccount = Boolean(
+    process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY,
   );
+  const hasApplicationDefault = Boolean(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.GCLOUD_PROJECT ||
+      process.env.GCP_PROJECT ||
+      process.env.FIREBASE_CONFIG,
+  );
+  return hasInlineServiceAccount || hasApplicationDefault;
 }
 
 export async function getAdminApp() {
   if (!isAdminConfigured()) return null;
-  const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+  const { initializeApp, getApps, cert, applicationDefault } = await import('firebase-admin/app');
   if (getApps().length) {
     const { getApp } = await import('firebase-admin/app');
     return getApp();
+  }
+  if (!(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)) {
+    return initializeApp({
+      credential: applicationDefault(),
+      projectId:
+        process.env.FIREBASE_PROJECT_ID ??
+        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
+        process.env.GCLOUD_PROJECT ??
+        process.env.GCP_PROJECT,
+    });
   }
   return initializeApp({
     credential: cert({

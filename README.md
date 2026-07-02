@@ -28,6 +28,10 @@ role-based admin dashboard.
 - **Role-based admin dashboard** — overview, bookings, payments, buses, routes, schedules,
   seat layouts, fare categories, customers, staff, promotions, CMS content, announcements,
   FAQs, reports (with CSV export), ticket verification, system settings, audit logs.
+- **Production admin config** at `/admin/config` for safe public runtime settings,
+  booking switches, provider flags, announcement banners, and support contacts.
+- **Firebase/Vertex support chatbot** with floating widget, `/support/chat`, protected
+  Cloud Function backend, Remote Config model/runtime controls, and `/admin/chatbot`.
 - **Mobile-first, accessible (WCAG 2.1 AA-minded)**, SEO-ready (metadata, OG/Twitter,
   sitemap, robots, JSON-LD), performance-conscious.
 
@@ -39,6 +43,7 @@ role-based admin dashboard.
 | Styling | Tailwind CSS 3, custom design system, Lucide icons |
 | Forms / validation | React Hook Form + Zod (shared client + server) |
 | Data (production) | Firebase Auth, Cloud Firestore, Firebase Storage |
+| Functions / AI | Firebase Cloud Functions, Firebase Remote Config, Vertex AI Gemini |
 | Data (demo) | In-memory mock store behind a `getDb()` abstraction |
 | Payments | Provider abstraction — mock adapter + Paystack (test) adapter |
 | Notifications | Nodemailer (SMTP) email + pluggable SMS provider abstraction |
@@ -71,8 +76,18 @@ Key variables (see `.env.example` for the full list):
 - `NEXT_PUBLIC_DEMO_MODE=true` — run on the mock layer (no external services).
 - `PAYMENT_PROVIDER=mock` — use the simulated gateway. Set to `paystack` + keys for real test payments.
 - `DEMO_ADMIN_EMAIL` / `DEMO_ADMIN_PASSWORD` — local-only staff login.
+- `NEXT_PUBLIC_USE_FIREBASE_CHATBOT=false` — use local chatbot fallback until functions deploy.
+- `VERTEX_AI_DEFAULT_MODEL` / `VERTEX_AI_LOCATION` — server-only Vertex AI defaults for functions.
 
 **Never commit `.env.local` or real secrets.**
+
+## Production upgrade docs
+
+- `PRODUCTION_UPGRADE_PLAN.md` - detected stack and implementation plan.
+- `PRODUCTION_READINESS_REPORT.md` - what is ready, what changed, and manual launch work.
+- `ADMIN_CONFIG_GUIDE.md` - public/server-only config and Remote Config key usage.
+- `CHATBOT_SETUP.md` - Vertex AI, Remote Config, App Check, and chatbot deployment.
+- `ADMIN_SETUP.md` - Google sign-in, roles, and super-admin bootstrap.
 
 ## 🧑‍💻 Local development
 

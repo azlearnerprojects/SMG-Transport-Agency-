@@ -33,10 +33,57 @@ platform's secret manager.
 
 ## Option C — Firebase Hosting + Cloud Functions
 
-Use a Next.js-on-Firebase adapter (e.g. Firebase web frameworks / `firebase deploy`), and
-deploy rules/indexes:
+Configured Firebase project ID:
+
+```text
+smg-transport-agency
+```
+
+This repo uses Firebase web frameworks Hosting (`firebase.json` has `hosting.source`
+set to `.`) and Cloud Functions source `functions`.
+
+Before deployment, install or update the Firebase CLI:
+
 ```powershell
-firebase deploy --only firestore:rules,firestore:indexes,storage,hosting
+npm install -g firebase-tools@latest
+firebase --version
+```
+
+Authenticate and select the project:
+
+```powershell
+firebase login
+firebase projects:list
+firebase use smg-transport-agency
+```
+
+Run pre-flight checks:
+
+```powershell
+npm run functions:build
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+Deploy in smaller chunks:
+
+```powershell
+npm run deploy:rules
+npm run deploy:functions
+npm run deploy:hosting
+```
+
+`npm run deploy:all` runs the same chunks in order: Firestore rules/indexes and
+Storage rules, then Functions, then Hosting. If the full deploy times out or the
+shell reports `EPIPE`, rerun each target separately. Do not mark deployment
+complete unless Firebase CLI prints a success message for the target.
+
+After Francis has signed in once and Admin credentials are configured:
+
+```powershell
+npm run admin:set-super-admin
 ```
 
 ## Post-deploy checklist

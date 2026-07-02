@@ -6,14 +6,16 @@
  *
  * Requirements:
  *   - Francis must have signed in with Google at least once.
- *   - FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must
- *     be available in .env.local, .env, or the process environment.
+ *   - Use FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY, or
+ *     Google Application Default Credentials / GOOGLE_APPLICATION_CREDENTIALS.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+
+const SUPER_ADMIN_EMAIL = 'francis@pwavwe.com';
 
 function loadEnvFile(fileName: string) {
   const path = resolve(process.cwd(), fileName);
@@ -34,31 +36,37 @@ function loadEnvFile(fileName: string) {
   }
 }
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing ${name}. Add it to .env.local or your shell environment.`);
-  }
-  return value;
-}
-
 async function main() {
   loadEnvFile('.env.local');
   loadEnvFile('.env');
 
-  const projectId = requireEnv('FIREBASE_PROJECT_ID');
-  const clientEmail = requireEnv('FIREBASE_CLIENT_EMAIL');
-  const privateKey = requireEnv('FIREBASE_PRIVATE_KEY').replace(/\\n/g, '\n');
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ??
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
+    process.env.GCLOUD_PROJECT ??
+    process.env.GCP_PROJECT;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
   if (!getApps().length) {
-    initializeApp({
-      credential: cert({ projectId, clientEmail, privateKey }),
-    });
+    if (projectId && clientEmail && privateKey) {
+      initializeApp({
+        credential: cert({ projectId, clientEmail, privateKey }),
+      });
+    } else {
+      initializeApp({
+        credential: applicationDefault(),
+        projectId,
+      });
+    }
   }
 
   const auth = getAuth();
   const firestore = getFirestore();
-  const email = (process.env.SUPER_ADMIN_EMAIL ?? 'francis@pwavwe.com').trim().toLowerCase();
+  const email = SUPER_ADMIN_EMAIL;
+
+  console.log(`Promoting ${email} to SMG Super Admin.`);
+  console.log(`Firebase project: ${projectId ?? 'Application Default Credentials default project'}`);
 
   let user;
   try {
@@ -104,6 +112,11 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  const message = err instanceof Error ? err.message : String(err);
+  if (/credential|GOOGLE_APPLICATION_CREDENTIALS|application default|private key|could not load/i.test(message)) {
+    console.error('Firebase Admin credentials are not configured or are invalid.');
+    console.error('Configure Google Application Default Credentials or set GOOGLE_APPLICATION_CREDENTIALS to a service-account JSON outside this repo, then rerun npm run admin:set-super-admin.');
+  }
+  console.error(message);
   process.exit(1);
 });

@@ -6,17 +6,21 @@ import {
   Bus,
   CalendarClock,
   CircleDollarSign,
+  CreditCard,
   MapPinned,
   Megaphone,
   Plus,
   RefreshCw,
   Route as RouteIcon,
   ShieldCheck,
+  MessageCircle,
+  TriangleAlert,
   Ticket,
   Users,
 } from 'lucide-react';
 import { getStaffSession } from '@/lib/auth/session';
 import { getDb } from '@/lib/db';
+import { countChatSessions } from '@/lib/chatbot/admin';
 import { formatCurrency, formatDate, formatTime } from '@/lib/format';
 import { BookingStatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -49,11 +53,15 @@ export default async function AdminOverview() {
   const buses = db.listBuses();
   const schedules = db.listSchedules();
   const payments = db.listPayments();
+  const chatSessions = await countChatSessions();
   const today = new Date().toISOString().slice(0, 10);
 
   const pendingChanges = bookings.filter((booking) =>
     ['cancel_requested', 'reschedule_requested'].includes(booking.status),
   ).length;
+  const pendingCancellations = bookings.filter((booking) => booking.status === 'cancel_requested').length;
+  const pendingReschedules = bookings.filter((booking) => booking.status === 'reschedule_requested').length;
+  const failedPayments = payments.filter((payment) => payment.status === 'failed').length;
   const availableBuses = buses.filter((bus) => bus.status === 'active').length;
   const todayDepartures = schedules.filter((schedule) => schedule.date === today && schedule.status === 'scheduled').length;
   const statusCounts = countByStatus(bookings);
@@ -67,7 +75,11 @@ export default async function AdminOverview() {
     { label: 'Total revenue', value: formatCurrency(overview.revenue), icon: CircleDollarSign, hint: 'Confirmed trips only' },
     { label: 'Active routes', value: routes.length, icon: MapPinned, hint: 'Published travel corridors' },
     { label: 'Available buses', value: availableBuses, icon: Bus, hint: `${buses.length} buses in fleet` },
-    { label: 'Pending changes', value: pendingChanges, icon: RefreshCw, hint: 'Cancellations or reschedules' },
+    { label: 'Pending cancellations', value: pendingCancellations, icon: TriangleAlert, hint: `${pendingChanges} total passenger changes` },
+    { label: 'Pending reschedules', value: pendingReschedules, icon: RefreshCw, hint: 'Trips waiting for staff action' },
+    { label: 'Failed payments', value: failedPayments, icon: CreditCard, hint: 'Needs finance review' },
+    { label: 'Chatbot conversations', value: chatSessions.count, icon: MessageCircle, hint: chatSessions.configured ? 'Stored support sessions' : 'Firebase not configured' },
+    { label: 'System health', value: 'Online', icon: ShieldCheck, hint: 'Core dashboard reachable' },
   ];
 
   return (

@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+/functions/node_modules
 /.pnp
 .pnp.*
 
@@ -10,6 +11,7 @@ next-env.d.ts
 
 # production
 /build
+/functions/lib
 
 # testing
 /coverage

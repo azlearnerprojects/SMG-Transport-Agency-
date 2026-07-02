@@ -25,7 +25,23 @@ export function isFirebaseConfigured(): boolean {
 export async function getFirebaseApp() {
   if (!isFirebaseConfigured()) return null;
   const { initializeApp, getApps, getApp } = await import('firebase/app');
-  return getApps().length ? getApp() : initializeApp(getFirebaseClientConfig());
+  const app = getApps().length ? getApp() : initializeApp(getFirebaseClientConfig());
+  await maybeInitAppCheck(app);
+  return app;
+}
+
+let appCheckStarted = false;
+
+async function maybeInitAppCheck(app: unknown) {
+  if (appCheckStarted || typeof window === 'undefined') return;
+  const siteKey = process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY;
+  if (!siteKey) return;
+  const { initializeAppCheck, ReCaptchaEnterpriseProvider } = await import('firebase/app-check');
+  initializeAppCheck(app as Parameters<typeof initializeAppCheck>[0], {
+    provider: new ReCaptchaEnterpriseProvider(siteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+  appCheckStarted = true;
 }
 
 /**
@@ -45,4 +61,12 @@ export async function getFirebaseDb() {
   if (!app) return null;
   const { getFirestore } = await import('firebase/firestore');
   return getFirestore(app);
+}
+
+/** Returns the Firebase Functions instance, or null when Firebase is unconfigured. */
+export async function getFirebaseFunctions() {
+  const app = await getFirebaseApp();
+  if (!app) return null;
+  const { getFunctions } = await import('firebase/functions');
+  return getFunctions(app, process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION ?? 'us-central1');
 }

@@ -32,7 +32,7 @@ service cloud.firestore {
       return role() in ['super_admin', 'admin'];
     }
     function isStaff() {
-      return role() in ['super_admin', 'admin', 'staff', 'operations_manager', 'booking_officer',
+      return role() in ['super_admin', 'admin', 'staff', 'support_agent', 'operations_manager', 'booking_officer',
                         'customer_support', 'finance_officer', 'content_editor', 'ticket_inspector'];
     }
     function hasAnyRole(roles) {
@@ -55,6 +55,13 @@ service cloud.firestore {
         && request.resource.data.role in ['customer', 'staff_pending']
         && request.resource.data.status in ['active', 'pending'];
     }
+    function chatOwner(sessionId) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/chatSessions/$(sessionId)).data.uid == uid();
+    }
+    function canSupportChats() {
+      return hasAnyRole(['customer_support', 'support_agent']);
+    }
 
     // ---- Public operational data: world-readable, staff-writable only ----
     match /routes/{id}        { allow read: if true; allow write: if hasAnyRole(['operations_manager']); }
@@ -65,7 +72,8 @@ service cloud.firestore {
     match /promotions/{id}    { allow read: if true; allow write: if hasAnyRole(['operations_manager','content_editor']); }
     match /announcements/{id} { allow read: if true; allow write: if hasAnyRole(['content_editor','customer_support']); }
     match /contentPages/{id}  { allow read: if true; allow write: if hasAnyRole(['content_editor']); }
-    match /faqs/{id}          { allow read: if true; allow write: if hasAnyRole(['content_editor']); }
+    match /faqs/{id}          { allow read: if true; allow write: if hasAnyRole(['content_editor','customer_support']); }
+    match /policies/{id}      { allow read: if true; allow write: if hasAnyRole(['content_editor','customer_support']); }
 
     // ---- Users: owner profile edits are limited; role/status are privileged ----
     match /users/{userId} {
@@ -135,6 +143,33 @@ service cloud.firestore {
     match /systemSettings/{id} {
       allow read: if true;
       allow write: if hasAnyRole(['operations_manager','finance_officer']);
+    }
+
+    // ---- Site/admin config: public doc is safe; private/server config is locked down ----
+    match /siteConfig/{id} {
+      allow read: if id == 'public' || role() == 'super_admin';
+      allow write: if role() == 'super_admin';
+    }
+
+    // ---- Remote Config drafts: direct client writes are limited; publishing happens via Functions ----
+    match /remoteConfigDrafts/{id} {
+      allow read: if isAdmin();
+      allow create: if role() == 'super_admin';
+      allow update, delete: if false;
+    }
+
+    // ---- Chat sessions: owner/support visibility; messages are server-managed ----
+    match /chatSessions/{sessionId} {
+      allow read: if canSupportChats() || (isSignedIn() && resource.data.uid == uid());
+      allow create: if isSignedIn() && request.resource.data.uid == uid();
+      allow update: if canSupportChats() || (isSignedIn() && resource.data.uid == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']));
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if canSupportChats() || chatOwner(sessionId);
+        allow write: if false;
+      }
     }
 
     // ---- Audit logs: admin read; super admin append-only (no update/delete) ----

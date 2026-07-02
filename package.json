@@ -13,6 +13,12 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "seed": "tsx scripts/seed.ts",
+    "functions:build": "npm --prefix functions run build",
+    "deploy": "npm run deploy:all",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:functions": "npm run functions:build && firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "deploy:all": "npm run deploy:rules && npm run deploy:functions && npm run deploy:hosting",
     "admin:set-super-admin": "tsx scripts/set-super-admin.ts"
   },
   "dependencies": {

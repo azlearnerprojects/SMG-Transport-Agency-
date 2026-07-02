@@ -34,11 +34,101 @@ FIREBASE_PROJECT_ID=
 FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ADMIN_SESSION_SECRET=
-SUPER_ADMIN_EMAIL=francis@pwavwe.com
 ```
 
-Keep real secrets in `.env.local` or the hosting provider secret manager. Do not
-commit them.
+The super-admin bootstrap script has one fixed production target:
+`francis@pwavwe.com`.
+
+Keep real secrets in `.env.local`, Firebase Functions environment/secrets, or the
+hosting provider secret manager. Do not commit them.
+
+## Firebase Admin Credentials
+
+The Admin SDK is required for the super-admin bootstrap, server-side ID-token
+verification, role claims, privileged Firestore writes, Remote Config publishing,
+and Cloud Functions admin work.
+
+Use one of these supported local credential paths.
+
+### Option A - Google Application Default Credentials
+
+1. Install or verify the Google Cloud CLI:
+
+```powershell
+gcloud --version
+```
+
+2. Sign in for Application Default Credentials:
+
+```powershell
+gcloud auth application-default login
+```
+
+3. Set the Firebase/Google Cloud project:
+
+```powershell
+gcloud config set project smg-transport-agency
+```
+
+4. Verify ADC can mint a token:
+
+```powershell
+gcloud auth application-default print-access-token
+```
+
+5. Keep the local project env aligned:
+
+```powershell
+$env:FIREBASE_PROJECT_ID="smg-transport-agency"
+```
+
+### Option B - Service Account JSON
+
+1. In Firebase Console or Google Cloud Console, create/download a Firebase Admin
+   service account key for project `smg-transport-agency`.
+2. Store the JSON outside this repo, for example under a private local secrets
+   folder.
+3. Point the shell at it before running admin scripts:
+
+Windows PowerShell:
+
+```powershell
+$env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\service-account.json"
+$env:FIREBASE_PROJECT_ID="smg-transport-agency"
+```
+
+macOS/Linux:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+export FIREBASE_PROJECT_ID="smg-transport-agency"
+```
+
+Never commit the JSON file. `.gitignore` excludes common env files, but it cannot
+protect secrets stored under a new filename.
+
+## Required Firebase/Google Services
+
+Enable these before production deploy:
+
+- Firebase Authentication.
+- Google sign-in provider.
+- Cloud Firestore.
+- Firebase Hosting.
+- Cloud Functions for Firebase.
+- Firebase Remote Config.
+- Firebase App Check.
+- Vertex AI API.
+- Billing on the Firebase/Google Cloud project if Cloud Functions or Vertex AI
+  require it.
+
+The deploying account or service account needs enough IAM for:
+
+- Firebase Hosting Admin or Firebase Admin for hosting deploys.
+- Cloud Datastore/Firestore permissions for rules and index deploys.
+- Cloud Functions Admin plus service account act-as permissions for functions.
+- Remote Config Admin for publishing config from admin tools.
+- Vertex AI User for the Cloud Functions runtime service account.
 
 ## Google Sign-In And Profile Creation
 
@@ -77,6 +167,7 @@ Primary auth roles:
 - `super_admin`: full access, including role/status changes.
 - `admin`: can access operational admin screens and read users.
 - `staff`: reserved for limited staff access.
+- `support_agent`: can access support/chatbot conversation tooling without model-setting privileges.
 - `customer`: no admin access.
 - `staff_pending`: no admin access until approved.
 
@@ -99,7 +190,7 @@ Firebase custom claims should include `role`. Super admins also get:
 
 1. Confirm Google provider is enabled in Firebase Authentication.
 2. Ask Francis to sign in once with `francis@pwavwe.com`.
-3. Make sure Admin SDK env vars are present.
+3. Configure Admin SDK credentials using Option A or Option B above.
 4. Run:
 
 ```powershell
@@ -115,6 +206,18 @@ The script:
 
 If the Auth user does not exist yet, the script exits with a clear message and can
 be rerun after the first Google sign-in.
+
+Troubleshooting:
+
+- If the script says the user was not found, sign in once with Google using
+  `francis@pwavwe.com`, then rerun:
+
+```powershell
+npm run admin:set-super-admin
+```
+
+- If the script says credentials are missing or invalid, run the ADC verification
+  command or re-check `GOOGLE_APPLICATION_CREDENTIALS`.
 
 ## Users & Roles
 
@@ -157,8 +260,22 @@ Existing typed collections and placeholder/admin pages cover:
 - `schedules/{scheduleId}`
 - `payments/{paymentId}`
 - `announcements/{announcementId}`
+- `siteConfig/public`
+- `siteConfig/private`
+- `remoteConfigDrafts/{draftId}`
+- `faqs/{faqId}`
+- `policies/{policyId}`
+- `chatSessions/{sessionId}`
+- `chatSessions/{sessionId}/messages/{messageId}`
 
 See `DATABASE_SCHEMA.md` and `src/lib/types.ts` for the full domain model.
+
+## Admin Config And Chatbot
+
+- `/admin/config` manages safe public runtime settings and can publish matching Remote Config keys.
+- `/admin/chatbot` manages support chat status, welcome text, escalation, FAQ/policy entries, conversation review, and AI runtime settings.
+- Only `super_admin` can update chatbot model name, system prompt version, temperature, and output-token limits.
+- `support_agent` can view and resolve chat sessions but cannot update model settings.
 
 ## Security Notes
 
@@ -174,19 +291,41 @@ See `DATABASE_SCHEMA.md` and `src/lib/types.ts` for the full domain model.
 Run local checks:
 
 ```powershell
-npm run lint
+npm run functions:build
 npm run typecheck
+npm run lint
+npm test
 npm run build
 ```
 
-Deploy Firebase rules and the Next app through the existing Firebase Hosting setup:
+Deploy in smaller chunks. This is more resilient than a single full Firebase
+deploy if the CLI or shell output stream times out.
 
 ```powershell
-firebase deploy --only hosting,firestore:rules,firestore:indexes,storage
+npm run deploy:rules
+npm run deploy:functions
+npm run deploy:hosting
 ```
 
-If Cloud Functions are added later, deploy them with:
+`npm run deploy:all` runs those chunks in this order:
+
+1. Firestore rules/indexes and Storage rules.
+2. Cloud Functions.
+3. Hosting.
+
+If `deploy:all` times out or fails, rerun each target separately. Do not assume a
+deployment succeeded unless the Firebase CLI prints a success message for that
+target.
+
+After credentials are configured and Francis has signed in once, promote the
+super admin:
 
 ```powershell
-firebase deploy --only hosting,firestore:rules,firestore:indexes,functions
+npm run admin:set-super-admin
+```
+
+If the promoted admin state changes public/admin UI behavior, redeploy hosting:
+
+```powershell
+npm run deploy:hosting
 ```

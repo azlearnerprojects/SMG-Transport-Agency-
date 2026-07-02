@@ -7,6 +7,7 @@ import { ChromeGate } from '@/components/layout/chrome-gate';
 import { DemoBadge } from '@/components/layout/demo-badge';
 import { CustomerAuthProvider } from '@/lib/auth/customer-auth';
 import { APP_URL, BRAND } from '@/lib/config';
+import { ChatbotWidget } from '@/components/chatbot/chatbot-widget';
 
 const montserrat = Montserrat({
   subsets: ['latin'],
@@ -100,6 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChromeGate header={<SiteHeader />} footer={<SiteFooter />}>
             {children}
           </ChromeGate>
+          <ChatbotWidget />
           <DemoBadge />
         </CustomerAuthProvider>
         <script
