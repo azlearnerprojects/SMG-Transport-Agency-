@@ -50,6 +50,10 @@ and Cloud Functions admin work.
 
 Use one of these supported local credential paths.
 
+If `gcloud` is not installed on this machine, skip Option A and use Option B.
+The bootstrap script does not require `gcloud` specifically; it only needs valid
+Admin SDK credentials.
+
 ### Option A - Google Application Default Credentials
 
 1. Install or verify the Google Cloud CLI:

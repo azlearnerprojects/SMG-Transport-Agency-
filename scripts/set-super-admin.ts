@@ -7,7 +7,8 @@
  * Requirements:
  *   - Francis must have signed in with Google at least once.
  *   - Use FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY, or
- *     Google Application Default Credentials / GOOGLE_APPLICATION_CREDENTIALS.
+ *     Google Application Default Credentials via gcloud, or a service-account
+ *     JSON pointed to by GOOGLE_APPLICATION_CREDENTIALS.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -115,7 +116,8 @@ main().catch((err) => {
   const message = err instanceof Error ? err.message : String(err);
   if (/credential|GOOGLE_APPLICATION_CREDENTIALS|application default|private key|could not load/i.test(message)) {
     console.error('Firebase Admin credentials are not configured or are invalid.');
-    console.error('Configure Google Application Default Credentials or set GOOGLE_APPLICATION_CREDENTIALS to a service-account JSON outside this repo, then rerun npm run admin:set-super-admin.');
+    console.error('If gcloud is not installed, use a service-account JSON outside this repo and set GOOGLE_APPLICATION_CREDENTIALS to its full path. Otherwise install Google Cloud CLI and run gcloud auth application-default login.');
+    console.error('Then rerun npm run admin:set-super-admin.');
   }
   console.error(message);
   process.exit(1);
