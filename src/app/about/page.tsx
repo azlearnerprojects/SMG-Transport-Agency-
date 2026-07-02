@@ -1,14 +1,10 @@
-import type { Metadata } from 'next';
 import Image from 'next/image';
 import { Target, Eye, HeartHandshake, Sparkles, ShieldCheck, Users } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'About SMG',
-  description:
-    'SMG Transport Agency is a youth-driven Ghanaian transport company making intercity travel affordable, reliable and comfortable.',
-};
+export const metadata = buildRouteMetadata('/about');
 
 const VALUES = [
   { icon: ShieldCheck, title: 'Safety first', body: 'Well-maintained buses and professional drivers on every journey.' },

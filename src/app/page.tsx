@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { SearchCard } from '@/components/booking/search-card';
+import { buildHomeStructuredData } from '@/lib/seo';
 
 export default async function HomePage() {
   const db = getDb();
@@ -36,6 +37,7 @@ export default async function HomePage() {
   const activePromo = promotions.find(
     (p) => p.active && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now,
   );
+  const jsonLd = buildHomeStructuredData(site);
 
   // Starting price per popular route = lowest standard fare across its schedules.
   const popular = routes
@@ -278,6 +280,7 @@ export default async function HomePage() {
           </CardContent>
         </Card>
       </section>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
     </>
   );
 }

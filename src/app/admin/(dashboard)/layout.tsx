@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 import { canAccessAdmin, getStaffSession } from '@/lib/auth/session';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { buildNoIndexMetadata } from '@/lib/seo';
+
+export const metadata = buildNoIndexMetadata('Admin Dashboard');
 
 /**
  * Protected admin layout. The staff session is verified server-side here, so

@@ -6,11 +6,9 @@ import { BookingDetails } from '@/components/booking/booking-details';
 import { PaymentPanel } from '@/components/booking/payment-panel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Review & pay',
-  robots: { index: false },
-};
+export const metadata: Metadata = buildNoIndexMetadata('Review & Pay');
 
 export default async function ReviewPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;

@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
 import { PageHeader } from '@/components/layout/page-header';
 import { ManageBooking } from '@/components/manage-booking';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Manage Booking',
-  description: 'Look up your SMG booking to view your ticket, reschedule or cancel.',
-};
+export const metadata = buildNoIndexMetadata(
+  'Manage Booking',
+  'Look up your SMG booking to view your ticket, reschedule or cancel.',
+);
 
 export default function ManagePage() {
   return (

@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
 import { getPublicSiteConfig } from '@/lib/site-config';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Terms & Conditions',
-  description: 'Terms governing use of the SMG booking platform.',
-};
+export const metadata = buildRouteMetadata('/terms');
 
 export default async function TermsPage() {
   const { config: site } = await getPublicSiteConfig();

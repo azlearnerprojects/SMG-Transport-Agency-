@@ -1,15 +1,12 @@
-import type { Metadata } from 'next';
 import Image from 'next/image';
 import { CheckCircle2 } from 'lucide-react';
 import { getDb } from '@/lib/db';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Our Fleet',
-  description: 'Comfortable, well-maintained coaches across Standard, Business and VIP classes.',
-};
+export const metadata = buildRouteMetadata('/fleet');
 
 const TERMINAL_PHOTO = {
   src: '/images/fleet/coach-terminal-sunrise.png',

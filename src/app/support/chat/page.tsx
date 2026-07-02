@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
 import { ChatSurface } from '@/components/chatbot/chat-surface';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Support Chat',
-  description: 'Chat with SMG Transport Agency support for booking, route, payment, cancellation, and rescheduling help.',
-};
+export const metadata = buildRouteMetadata('/support/chat');
 
 export default function SupportChatPage() {
   return (

@@ -1,13 +1,10 @@
-import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { getDb } from '@/lib/db';
 import { ProgressSteps } from '@/components/booking/progress-steps';
 import { BookSearchExperience, type StaticTrip } from '@/components/booking/book-search-experience';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Book a Trip',
-  description: 'Search SMG intercity departures, compare buses and fares, and pick your seat.',
-};
+export const metadata = buildRouteMetadata('/book');
 
 export const dynamic = 'force-dynamic';
 

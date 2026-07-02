@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowRight, Clock, MapPin } from 'lucide-react';
 import { getDb } from '@/lib/db';
@@ -7,11 +6,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDuration, formatTime } from '@/lib/format';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Routes & Schedules',
-  description: 'Browse SMG intercity routes across Ghana, departure times and fares.',
-};
+export const metadata = buildRouteMetadata('/routes');
 
 export default async function RoutesPage() {
   const db = getDb();

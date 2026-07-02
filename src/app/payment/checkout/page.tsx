@@ -1,8 +1,9 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { CheckoutClient } from './checkout-client';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Payment', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Payment');
 
 export default function CheckoutPage() {
   return (

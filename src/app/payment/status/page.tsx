@@ -4,8 +4,9 @@ import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getDb } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Payment status', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Payment Status');
 
 export default async function PaymentStatusPage({
   searchParams,

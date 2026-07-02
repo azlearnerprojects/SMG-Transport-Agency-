@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
 import { getPublicSiteConfig } from '@/lib/site-config';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'How SMG collects, uses and protects your personal data.',
-};
+export const metadata = buildRouteMetadata('/privacy');
 
 export default async function PrivacyPage() {
   const { config: site } = await getPublicSiteConfig();
