@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { ChromeGate } from '@/components/layout/chrome-gate';
 import { DemoBadge } from '@/components/layout/demo-badge';
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { CustomerAuthProvider } from '@/lib/auth/customer-auth';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { ChatbotWidget } from '@/components/chatbot/chatbot-widget';
@@ -12,7 +13,6 @@ import {
   CANONICAL_SITE_URL,
   DEFAULT_OG_IMAGE,
   HOME_SEO_DESCRIPTION,
-  HOME_SEO_TITLE,
   SEO_KEYWORDS,
   absoluteUrl,
   buildSeoMetadata,
@@ -46,9 +46,11 @@ export const viewport: Viewport = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const { config: site } = await getPublicSiteConfig();
+  const homeTitle = `${site.siteName} | ${site.tagline}`;
+  const homeDescription = site.homeIntro || HOME_SEO_DESCRIPTION;
   const homeMetadata = buildSeoMetadata({
-    title: HOME_SEO_TITLE,
-    description: HOME_SEO_DESCRIPTION,
+    title: homeTitle,
+    description: homeDescription,
     path: '/',
   });
 
@@ -56,10 +58,10 @@ export async function generateMetadata(): Promise<Metadata> {
     ...homeMetadata,
     metadataBase: new URL(CANONICAL_SITE_URL),
     title: {
-      default: HOME_SEO_TITLE,
+      default: homeTitle,
       template: `%s | ${site.siteName}`,
     },
-    description: HOME_SEO_DESCRIPTION,
+    description: homeDescription,
     applicationName: site.siteName,
     keywords: SEO_KEYWORDS,
     authors: [{ name: site.siteName }],
@@ -70,8 +72,8 @@ export async function generateMetadata(): Promise<Metadata> {
       ...homeMetadata.openGraph,
       type: 'website',
       siteName: site.siteName,
-      title: HOME_SEO_TITLE,
-      description: HOME_SEO_DESCRIPTION,
+      title: homeTitle,
+      description: homeDescription,
       url: absoluteUrl('/'),
       images: [
         {
@@ -84,8 +86,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     twitter: {
       card: 'summary_large_image',
-      title: HOME_SEO_TITLE,
-      description: HOME_SEO_DESCRIPTION,
+      title: homeTitle,
+      description: homeDescription,
       images: [absoluteUrl(DEFAULT_OG_IMAGE)],
     },
     alternates: {
@@ -111,6 +113,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${montserrat.variable} ${openSans.variable}`}>
       <body className="flex min-h-screen flex-col bg-background">
+        <GoogleAnalytics />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-navy focus:px-4 focus:py-2 focus:text-white"

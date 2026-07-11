@@ -14,6 +14,8 @@ import { Field, Checkbox, Alert } from '@/components/ui/misc';
 import { SeatMap } from './seat-map';
 import { FareSummary } from './fare-summary';
 import { passengerSchema, type PassengerInput } from '@/lib/schemas';
+import { useCustomerAuth } from '@/lib/auth/customer-auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 import { getSessionId } from '@/lib/session-id';
 import { formatCurrency, formatDate, formatTime } from '@/lib/format';
 import type { SeatCell, FareTable, SeatCategory, BusCategory } from '@/lib/types';
@@ -54,6 +56,7 @@ export function SeatBooking({
   const [promoCode, setPromoCode] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useCustomerAuth();
 
   const {
     register,
@@ -66,14 +69,26 @@ export function SeatBooking({
   });
 
   // Restore any saved passenger draft (preserves progress on back-navigation).
+  // If there is no draft, seed the form from the signed-in customer profile.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) reset(JSON.parse(raw));
+      if (raw) {
+        reset(JSON.parse(raw));
+        return;
+      }
     } catch {
       /* ignore */
     }
-  }, [reset]);
+    if (user) {
+      reset({
+        fullName: user.fullName,
+        phone: user.phone,
+        email: user.email,
+        idType: 'ghana_card',
+      });
+    }
+  }, [reset, user]);
 
   function toggleSeat(seatId: string, seatCategory: string) {
     setSeatError(null);
@@ -135,9 +150,14 @@ export function SeatBooking({
       }
 
       // 2) Create the pending booking (server recomputes the fare).
+      const auth = user?.provider === 'firebase' ? await getFirebaseAuth() : null;
+      const token = await auth?.currentUser?.getIdToken().catch(() => undefined);
       const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           scheduleId: trip.scheduleId,
           seatIds: selected,

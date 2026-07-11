@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { ProgressSteps } from '@/components/booking/progress-steps';
 import { BookSearchExperience, type StaticTrip } from '@/components/booking/book-search-experience';
 import { buildRouteMetadata } from '@/lib/seo';
+import { isPublicRoute } from '@/lib/public-data';
 
 export const metadata = buildRouteMetadata('/book');
 
@@ -28,7 +29,8 @@ export default async function BookPage() {
     db.listLayouts(),
   ]);
 
-  const routeById = new Map(routes.map((r) => [r.id, r]));
+  const publicRoutes = routes.filter(isPublicRoute);
+  const routeById = new Map(publicRoutes.map((r) => [r.id, r]));
   const busById = new Map(buses.map((b) => [b.id, b]));
   const layoutById = new Map(layouts.map((l) => [l.id, l]));
   const dates = new Set(Array.from({ length: 7 }, (_, offset) => dateOnly(addDays(new Date(), offset))));

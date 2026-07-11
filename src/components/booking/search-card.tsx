@@ -28,6 +28,7 @@ export function SearchCard({
   const [date, setDate] = useState(defaults?.date ?? todayStr());
   const [passengers, setPassengers] = useState(defaults?.passengers ?? 1);
   const [error, setError] = useState<string | null>(null);
+  const hasCities = cities.length >= 2;
 
   function swap() {
     setOrigin(destination);
@@ -36,6 +37,10 @@ export function SearchCard({
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!hasCities) {
+      setError('Routes are being prepared. Please check back soon or contact support.');
+      return;
+    }
     const parsed = tripSearchSchema.safeParse({ origin, destination, date, passengers });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Please check your search');
@@ -56,13 +61,19 @@ export function SearchCard({
       }
       aria-label="Search for trips"
     >
+      {!hasCities && (
+        <div className="mb-4 rounded-md border border-dashed border-border bg-cloud p-4 text-sm text-muted-foreground">
+          Routes are being prepared by the SMG team. Once active routes are published, they will appear here.
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-12">
         <div className="md:col-span-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
             <Field label="From" htmlFor="origin">
               <div className="relative">
                 <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Select id="origin" className="pl-9" value={origin} onChange={(e) => setOrigin(e.target.value)}>
+                <Select id="origin" className="pl-9" value={origin} onChange={(e) => setOrigin(e.target.value)} disabled={!hasCities}>
+                  {!hasCities && <option value="">No active routes</option>}
                   {cities.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -82,7 +93,8 @@ export function SearchCard({
             <Field label="To" htmlFor="destination">
               <div className="relative">
                 <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Select id="destination" className="pl-9" value={destination} onChange={(e) => setDestination(e.target.value)}>
+                <Select id="destination" className="pl-9" value={destination} onChange={(e) => setDestination(e.target.value)} disabled={!hasCities}>
+                  {!hasCities && <option value="">No active routes</option>}
                   {cities.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -119,7 +131,7 @@ export function SearchCard({
         </div>
 
         <div className="flex items-end md:col-span-2">
-          <Button type="submit" size="lg" className="w-full">
+          <Button type="submit" size="lg" className="w-full" disabled={!hasCities}>
             <Search className="size-4" /> Search Trips
           </Button>
         </div>

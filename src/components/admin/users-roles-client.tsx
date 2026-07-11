@@ -7,6 +7,7 @@ import {
   Loader2,
   Search,
   ShieldCheck,
+  UserPlus,
   UserRound,
   X,
 } from 'lucide-react';
@@ -68,8 +69,44 @@ export function UsersRolesClient({
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
+  const [newEmail, setNewEmail] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState<AuthRole>('admin');
+  const [creating, setCreating] = useState(false);
 
   const canEdit = currentRole === 'super_admin';
+
+  async function createAdmin(event: React.FormEvent) {
+    event.preventDefault();
+    setCreating(true);
+    setToast(null);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newEmail.trim(),
+          displayName: newName.trim() || undefined,
+          role: newRole,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Could not create the account.');
+      const created = json.data?.user as UserProfile;
+      setUsers((current) => [created, ...current.filter((user) => user.uid !== created.uid)]);
+      setSelected(created);
+      setNewEmail('');
+      setNewName('');
+      setToast({
+        tone: 'success',
+        text: `${created.email} now has ${ROLE_LABELS[created.role]} access. They can sign in with Google using that email.`,
+      });
+    } catch (err) {
+      setToast({ tone: 'danger', text: err instanceof Error ? err.message : 'Could not create the account.' });
+    } finally {
+      setCreating(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -123,6 +160,53 @@ export function UsersRolesClient({
             {toast.text}
           </span>
         </Alert>
+      )}
+
+      {canEdit && (
+        <section className="rounded-lg border border-white/60 bg-white/80 p-4 shadow-card backdrop-blur">
+          <h2 className="flex items-center gap-2 font-heading text-base font-extrabold text-navy">
+            <UserPlus className="size-4" /> Add admin or staff
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Grant access by email. The person signs in with Google using this email — no password is set here.
+          </p>
+          <form onSubmit={createAdmin} className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_180px_auto]">
+            <label>
+              <span className="sr-only">Email</span>
+              <Input
+                type="email"
+                required
+                value={newEmail}
+                onChange={(event) => setNewEmail(event.target.value)}
+                placeholder="person@example.com"
+              />
+            </label>
+            <label>
+              <span className="sr-only">Display name</span>
+              <Input
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder="Full name (optional)"
+              />
+            </label>
+            <label>
+              <span className="sr-only">Role</span>
+              <select
+                value={newRole}
+                onChange={(event) => setNewRole(event.target.value as AuthRole)}
+                className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm text-navy"
+              >
+                {(['admin', 'super_admin', 'staff', 'support_agent'] as AuthRole[]).map((item) => (
+                  <option key={item} value={item}>{ROLE_LABELS[item]}</option>
+                ))}
+              </select>
+            </label>
+            <Button type="submit" variant="navy" disabled={creating}>
+              {creating ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+              Add
+            </Button>
+          </form>
+        </section>
       )}
 
       <section className="grid gap-3 rounded-lg border border-white/60 bg-white/80 p-4 shadow-card backdrop-blur md:grid-cols-[1fr_180px_180px]">

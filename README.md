@@ -75,11 +75,24 @@ Key variables (see `.env.example` for the full list):
 
 - `NEXT_PUBLIC_DEMO_MODE=true` — run on the mock layer (no external services).
 - `PAYMENT_PROVIDER=mock` — use the simulated gateway. Set to `paystack` + keys for real test payments.
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID` - GA4 web Measurement ID (`G-...`) for page views and booking conversions.
 - `DEMO_ADMIN_EMAIL` / `DEMO_ADMIN_PASSWORD` — local-only staff login.
 - `NEXT_PUBLIC_USE_FIREBASE_CHATBOT=false` — use local chatbot fallback until functions deploy.
 - `VERTEX_AI_DEFAULT_MODEL` / `VERTEX_AI_LOCATION` — server-only Vertex AI defaults for functions.
 
 **Never commit `.env.local` or real secrets.**
+
+## Google Analytics
+
+The app loads Google Analytics 4 when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set. It
+tracks route-change page views, payment-method submission (`add_payment_info`),
+and successful bookings as GA4 `purchase` events. Create a GA4 web data stream,
+copy its Measurement ID into `.env.local` or the host environment, redeploy, then
+confirm traffic in GA Realtime.
+
+If you see duplicate page views in a single-page navigation flow, disable GA4
+Enhanced Measurement's browser-history page changes for the web stream, because
+this app sends route-change page views itself.
 
 ## Production upgrade docs
 
@@ -98,7 +111,7 @@ npm run dev
 Then open **http://localhost:3000**.
 
 - **Demo customer login:** `ama@example.com` (any password) — or `kofi@example.com`.
-- **Demo admin login:** `admin@smgtransport.test` / `Demo!Admin2026` at `/admin/login`.
+- **Demo admin login:** `projects@azlearner.me` / `Demo!Admin2026` at `/admin/login`.
   (Also `ops@smgtransport.test`, `inspector@smgtransport.test` — same password.)
 
 Regenerate / inspect the demo dataset:
@@ -114,8 +127,8 @@ Demo Mode needs no emulators. To work against Firebase locally:
 1. Install the Firebase CLI: `npm i -g firebase-tools`.
 2. Configure `.env.local` with `NEXT_PUBLIC_DEMO_MODE=false` and your Firebase keys.
 3. Start the emulators: `firebase emulators:start` (config in `firebase.json`).
-4. See **FIREBASE_SETUP.md** for wiring the production Firestore adapter (currently a
-   documented stub — Demo Mode is the supported local path for this MVP).
+4. See **FIREBASE_SETUP.md** for the Firestore adapter, Admin SDK, custom-claim roles,
+   and production preflight checks.
 
 ## 🧪 Testing
 

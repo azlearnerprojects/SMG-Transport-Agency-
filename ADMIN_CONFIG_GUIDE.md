@@ -9,6 +9,13 @@ SMG uses two config layers:
 
 The `/admin/config` page updates safe public settings through `/api/admin/config`. The route verifies the server-side admin session, validates input, writes audit logs, and can publish matching Firebase Remote Config values when requested.
 
+The top of `/admin/config` also shows a **Production Readiness** diagnostic panel.
+Use it before deploy to catch local blockers that staff can act on: canonical
+domain drift, demo mode, missing Firebase client/Admin auth config, non-live
+Paystack keys, weak signing secrets, booking switches left closed, and public
+payment config still in test mode. The panel reports secret presence and mode
+only; it does not display secret values.
+
 ## Public Variables
 
 - Site name

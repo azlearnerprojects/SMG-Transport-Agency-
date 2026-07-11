@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CreditCard, Loader2, Megaphone, Save, Settings2, Share2 } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, CreditCard, Home, Loader2, Megaphone, Save, Settings2, Share2, XCircle } from 'lucide-react';
 import { Alert, Checkbox, Field } from '@/components/ui/misc';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { PublicSiteConfig } from '@/lib/types';
+import type { ProductionReadinessCheck, ProductionReadinessSummary, PublicSiteConfig } from '@/lib/types';
 
 function routesToText(routes: string[]) {
   return routes.join('\n');
@@ -18,6 +18,37 @@ function textToRoutes(value: string) {
     .split(/\r?\n/)
     .map((route) => route.trim())
     .filter(Boolean);
+}
+
+function listToText(items: string[]) {
+  return items.join('\n');
+}
+
+function textToList(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function benefitsToText(items: PublicSiteConfig['homeBenefits']) {
+  return items.map((item) => `${item.title} | ${item.body}`).join('\n');
+}
+
+function textToBenefits(value: string): PublicSiteConfig['homeBenefits'] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [rawTitle = '', ...bodyParts] = line.split('|');
+      const title = rawTitle.trim();
+      const body = bodyParts.join('|').trim();
+      return {
+        title,
+        body: body || title,
+      };
+    });
 }
 
 function ConfigCard({
@@ -42,15 +73,85 @@ function ConfigCard({
   );
 }
 
+function readinessTone(readiness: ProductionReadinessSummary): 'success' | 'warning' | 'danger' {
+  if (readiness.counts.fail > 0) return 'danger';
+  if (readiness.counts.warning > 0) return 'warning';
+  return 'success';
+}
+
+function ReadinessItem({ check }: { check: ProductionReadinessCheck }) {
+  const Icon = check.status === 'fail' ? XCircle : AlertTriangle;
+  const tone = check.status === 'fail' ? 'text-red-700' : 'text-amber-700';
+  const border = check.status === 'fail' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50';
+  return (
+    <li className={`rounded-md border p-3 ${border}`}>
+      <div className="flex items-start gap-2">
+        <Icon className={`mt-0.5 size-4 shrink-0 ${tone}`} />
+        <div>
+          <p className="text-sm font-semibold text-navy">{check.label}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{check.message}</p>
+          {check.help && <p className="mt-1 text-xs font-medium text-navy/80">{check.help}</p>}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ProductionReadinessPanel({ readiness }: { readiness: ProductionReadinessSummary }) {
+  const attention = readiness.checks.filter((check) => check.status !== 'pass');
+  const ready = readiness.ready && readiness.counts.warning === 0;
+  return (
+    <section className="rounded-lg border border-white/70 bg-white/90 p-5 shadow-card backdrop-blur">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 place-items-center rounded-lg bg-navy/5 text-navy">
+            {ready ? <CheckCircle2 className="size-5 text-green-700" /> : <AlertTriangle className="size-5 text-amber-700" />}
+          </span>
+          <div>
+            <h2 className="font-heading text-lg font-extrabold text-navy">Production Readiness</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {readiness.counts.pass} pass, {readiness.counts.warning} warning, {readiness.counts.fail} fail.
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full bg-navy px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+          {readiness.ready ? 'No blockers' : 'Blocked'}
+        </span>
+      </div>
+
+      <Alert variant={readinessTone(readiness)} className="mt-4">
+        {readiness.ready
+          ? readiness.counts.warning > 0
+            ? 'No blocking checks failed, but resolve warnings before launch if they affect the go-live plan.'
+            : 'No local production readiness blockers were found.'
+          : 'Resolve failed checks before deploying or switching production traffic.'}
+      </Alert>
+
+      {attention.length > 0 && (
+        <ul className="mt-4 grid gap-3 lg:grid-cols-2">
+          {attention.map((check) => (
+            <ReadinessItem key={check.id} check={check} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function AdminConfigClient({
   initial,
   configured,
+  readiness: initialReadiness,
 }: {
   initial: PublicSiteConfig;
   configured: boolean;
+  readiness: ProductionReadinessSummary;
 }) {
   const [form, setForm] = useState(initial);
+  const [readiness, setReadiness] = useState(initialReadiness);
   const [featuredRoutesText, setFeaturedRoutesText] = useState(routesToText(initial.featuredRoutes));
+  const [homeHighlightsText, setHomeHighlightsText] = useState(listToText(initial.homeHighlights));
+  const [homeBenefitsText, setHomeBenefitsText] = useState(benefitsToText(initial.homeBenefits));
   const [publishRemoteConfig, setPublishRemoteConfig] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -75,6 +176,8 @@ export function AdminConfigClient({
         body: JSON.stringify({
           ...form,
           featuredRoutes: textToRoutes(featuredRoutesText),
+          homeHighlights: textToList(homeHighlightsText),
+          homeBenefits: textToBenefits(homeBenefitsText),
           publishRemoteConfig,
           confirmDangerousChange,
         }),
@@ -86,7 +189,10 @@ export function AdminConfigClient({
         return;
       }
       setForm(json.data.config);
+      if (json.data.readiness) setReadiness(json.data.readiness);
       setFeaturedRoutesText(routesToText(json.data.config.featuredRoutes));
+      setHomeHighlightsText(listToText(json.data.config.homeHighlights));
+      setHomeBenefitsText(benefitsToText(json.data.config.homeBenefits));
       const remote = json.data.remoteConfig?.published ? ' Remote Config published.' : '';
       setMessage({ tone: 'success', text: `Configuration saved.${remote}` });
       setConfirming(false);
@@ -108,6 +214,8 @@ export function AdminConfigClient({
 
   return (
     <form onSubmit={submit} className="space-y-5">
+      <ProductionReadinessPanel readiness={readiness} />
+
       {!configured && (
         <Alert variant="warning" title="Firebase Admin SDK not configured">
           Changes will use the local demo fallback only. Configure server Firebase credentials before production.
@@ -116,13 +224,57 @@ export function AdminConfigClient({
       {message && <Alert variant={message.tone}>{message.text}</Alert>}
 
       <div className="grid gap-5 xl:grid-cols-2">
+        <div className="xl:col-span-2">
+          <ConfigCard icon={Home} title="Landing Page">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Field label="Hero eyebrow" htmlFor="homeEyebrow" required>
+                <Input id="homeEyebrow" value={form.homeEyebrow} onChange={(e) => set('homeEyebrow', e.target.value)} />
+              </Field>
+              <Field label="Hero headline" htmlFor="tagline" required>
+                <Input id="tagline" value={form.tagline} onChange={(e) => set('tagline', e.target.value)} />
+              </Field>
+              <div className="lg:col-span-2">
+                <Field label="Hero intro" htmlFor="homeIntro" required>
+                  <Textarea id="homeIntro" value={form.homeIntro} onChange={(e) => set('homeIntro', e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Highlights (one per line)" htmlFor="homeHighlights">
+                <Textarea id="homeHighlights" value={homeHighlightsText} onChange={(e) => setHomeHighlightsText(e.target.value)} />
+              </Field>
+              <Field label="Popular routes title" htmlFor="homeRoutesTitle" required>
+                <Input id="homeRoutesTitle" value={form.homeRoutesTitle} onChange={(e) => set('homeRoutesTitle', e.target.value)} />
+              </Field>
+              <Field label="Popular routes intro" htmlFor="homeRoutesIntro">
+                <Textarea id="homeRoutesIntro" value={form.homeRoutesIntro} onChange={(e) => set('homeRoutesIntro', e.target.value)} />
+              </Field>
+              <Field label="Benefits title" htmlFor="homeBenefitsTitle" required>
+                <Input id="homeBenefitsTitle" value={form.homeBenefitsTitle} onChange={(e) => set('homeBenefitsTitle', e.target.value)} />
+              </Field>
+              <div className="lg:col-span-2">
+                <Field label="Benefits (Title | Body, one per line)" htmlFor="homeBenefits" required>
+                  <Textarea id="homeBenefits" value={homeBenefitsText} onChange={(e) => setHomeBenefitsText(e.target.value)} />
+                </Field>
+              </div>
+              <Field label="FAQ title" htmlFor="homeFaqTitle" required>
+                <Input id="homeFaqTitle" value={form.homeFaqTitle} onChange={(e) => set('homeFaqTitle', e.target.value)} />
+              </Field>
+              <Field label="FAQ intro" htmlFor="homeFaqIntro">
+                <Input id="homeFaqIntro" value={form.homeFaqIntro} onChange={(e) => set('homeFaqIntro', e.target.value)} />
+              </Field>
+              <Field label="Support title" htmlFor="homeSupportTitle" required>
+                <Input id="homeSupportTitle" value={form.homeSupportTitle} onChange={(e) => set('homeSupportTitle', e.target.value)} />
+              </Field>
+              <Field label="Support body" htmlFor="homeSupportBody" required>
+                <Textarea id="homeSupportBody" value={form.homeSupportBody} onChange={(e) => set('homeSupportBody', e.target.value)} />
+              </Field>
+            </div>
+          </ConfigCard>
+        </div>
+
         <ConfigCard icon={Building2} title="Company">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Site name" htmlFor="siteName" required>
               <Input id="siteName" value={form.siteName} onChange={(e) => set('siteName', e.target.value)} />
-            </Field>
-            <Field label="Tagline" htmlFor="tagline" required>
-              <Input id="tagline" value={form.tagline} onChange={(e) => set('tagline', e.target.value)} />
             </Field>
             <Field label="Support email" htmlFor="supportEmail" required>
               <Input id="supportEmail" type="email" value={form.supportEmail} onChange={(e) => set('supportEmail', e.target.value)} />

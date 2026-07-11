@@ -1,286 +1,247 @@
 import Link from 'next/link';
-import {
-  ShieldCheck,
-  Wallet,
-  Clock,
-  Armchair,
-  Smartphone,
-  QrCode,
-  CheckCircle2,
-  Bus,
-  Star,
-  CreditCard,
-  ArrowRight,
-  MapPin,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle2, MapPin, MessageCircle, Phone } from 'lucide-react';
 import { getDb } from '@/lib/db';
 import { getPublicSiteConfig } from '@/lib/site-config';
 import { formatCurrency } from '@/lib/format';
+import { isPublicRoute } from '@/lib/public-data';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { SearchCard } from '@/components/booking/search-card';
-import { buildHomeStructuredData } from '@/lib/seo';
+import { buildHomeStructuredData, serializeJsonLd } from '@/lib/seo';
+import type { Route, Schedule } from '@/lib/types';
+
+function routeLabel(route: Route) {
+  return `${route.origin} to ${route.destination}`;
+}
+
+function normalizeRouteName(value: string) {
+  return value.trim().toLowerCase().replace(/\s*(->|→)\s*/g, ' to ');
+}
+
+function startingFare(route: Route, schedules: Schedule[]) {
+  const fares = schedules.filter((schedule) => schedule.routeId === route.id).map((schedule) => schedule.fares.standard);
+  return fares.length ? Math.min(...fares) : 0;
+}
 
 export default async function HomePage() {
   const db = getDb();
-  const [cities, routes, schedules, allFaqs, promotions, { config: site }] = await Promise.all([
+  const [cities, routes, schedules, allFaqs, promotions, announcements, { config: site }] = await Promise.all([
     db.getCities(),
     db.listRoutes(),
     db.listSchedules(),
     db.listFaqs(),
     db.listPromotions(),
+    db.listAnnouncements(),
     getPublicSiteConfig(),
   ]);
-  const faqs = allFaqs.slice(0, 4);
+
+  const publicRoutes = routes.filter(isPublicRoute);
+  const featuredRouteOrder = new Map(site.featuredRoutes.map((name, index) => [normalizeRouteName(name), index]));
+  const configuredRoutes = site.featuredRoutes.length
+    ? publicRoutes.filter((route) => featuredRouteOrder.has(normalizeRouteName(routeLabel(route))))
+    : [];
+  const routePool = configuredRoutes.length ? configuredRoutes : publicRoutes.filter((route) => route.popular);
+
+  const popular = routePool
+    .sort((a, b) => {
+      const aOrder = featuredRouteOrder.get(normalizeRouteName(routeLabel(a))) ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = featuredRouteOrder.get(normalizeRouteName(routeLabel(b))) ?? Number.MAX_SAFE_INTEGER;
+      return aOrder - bOrder;
+    })
+    .map((route) => ({ route, from: startingFare(route, schedules) }))
+    .slice(0, 6);
+
+  const faqs = allFaqs
+    .filter((faq) => faq.published)
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 4);
+
   const now = Date.now();
   const activePromo = promotions.find(
-    (p) => p.active && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now,
+    (promo) => promo.active && new Date(promo.startsAt).getTime() <= now && new Date(promo.endsAt).getTime() >= now,
   );
-  const jsonLd = buildHomeStructuredData(site);
-
-  // Starting price per popular route = lowest standard fare across its schedules.
-  const popular = routes
-    .filter((r) => r.popular)
-    .map((r) => {
-      const fares = schedules.filter((s) => s.routeId === r.id).map((s) => s.fares.standard);
-      return { route: r, from: fares.length ? Math.min(...fares) : 0 };
-    })
-    .slice(0, 6);
+  const activeAnnouncement = announcements
+    .filter((announcement) => new Date(announcement.publishedAt).getTime() <= now)
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))[0];
+  const jsonLd = serializeJsonLd(buildHomeStructuredData(site));
 
   return (
     <>
-      {/* HERO */}
-      <section className="hero-gradient relative text-white">
-        <div className="container-page grid gap-8 py-14 md:py-20 lg:grid-cols-2 lg:items-center">
-          <div className="animate-fade-in">
-            <Badge variant="gold" className="mb-4">Youth-driven • Ghana</Badge>
-            <h1 className="font-heading text-4xl font-extrabold leading-tight text-white md:text-5xl">
+      <section className="border-b border-border bg-white">
+        <div className="container-page grid gap-8 py-12 md:py-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-gold-700">{site.homeEyebrow}</p>
+            <h1 className="mt-3 max-w-3xl text-4xl font-extrabold leading-tight md:text-5xl">
               {site.tagline}
             </h1>
-            <p className="mt-4 max-w-xl text-lg text-white/80">
-              Book affordable and comfortable trips across Ghana with real-time seat selection and
-              secure digital payments.
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
+              {site.homeIntro}
             </p>
-            <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/85">
-              <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-gold" /> Real-time seats</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-gold" /> Mobile Money & cards</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="size-4 text-gold" /> Instant e-tickets</li>
-            </ul>
+
+            {site.homeHighlights.length > 0 && (
+              <ul className="mt-6 grid gap-3 text-sm text-navy sm:grid-cols-2">
+                {site.homeHighlights.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 shrink-0 text-gold-600" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/book">
+                <Button size="lg">
+                  Book a trip <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+              <Link href="/routes">
+                <Button variant="outline" size="lg">View routes</Button>
+              </Link>
+            </div>
           </div>
-          <div className="lg:pl-6">
-            <SearchCard cities={cities} />
-          </div>
+
+          <SearchCard cities={cities} />
         </div>
       </section>
 
-      {/* POPULAR ROUTES */}
-      <section className="container-page py-14">
-        <div className="flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-extrabold md:text-3xl">Popular routes</h2>
-            <p className="mt-2 text-muted-foreground">Frequently travelled intercity connections.</p>
+      {activeAnnouncement && (
+        <section className="border-b border-border bg-cloud">
+          <div className="container-page py-4">
+            <div className="rounded-lg border border-border bg-white px-4 py-3 text-sm text-navy shadow-card">
+              <strong>{activeAnnouncement.title}:</strong> {activeAnnouncement.body}
+            </div>
           </div>
-          <Link href="/routes" className="hidden sm:block">
-            <Button variant="outline" size="sm">View all routes <ArrowRight className="size-4" /></Button>
+        </section>
+      )}
+
+      <section className="container-page py-12 md:py-14">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-extrabold md:text-3xl">{site.homeRoutesTitle}</h2>
+            {site.homeRoutesIntro && <p className="mt-2 max-w-2xl text-muted-foreground">{site.homeRoutesIntro}</p>}
+          </div>
+          <Link href="/routes">
+            <Button variant="outline" size="sm">
+              View all <ArrowRight className="size-4" />
+            </Button>
           </Link>
         </div>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {popular.map(({ route, from }) => (
-            <Card key={route.id} className="transition-shadow hover:shadow-card-hover">
-              <CardContent className="p-5">
+
+        {popular.length > 0 ? (
+          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {popular.map(({ route, from }) => (
+              <article key={route.id} className="rounded-lg border border-border bg-white p-5 shadow-card">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="size-4 text-gold" /> {route.distanceKm} km
+                  <MapPin className="size-4 text-gold-600" />
+                  <span>{route.distanceKm} km</span>
                 </div>
-                <div className="mt-2 flex items-center gap-2 font-heading text-lg font-bold text-navy">
-                  {route.origin} <ArrowRight className="size-4 text-gold" /> {route.destination}
-                </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    from <span className="text-lg font-bold text-navy">{formatCurrency(from)}</span>
-                  </span>
+                <h3 className="mt-3 text-lg font-extrabold text-navy">{route.origin} to {route.destination}</h3>
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    {from > 0 ? <>From <span className="font-bold text-navy">{formatCurrency(from)}</span></> : 'Departures soon'}
+                  </p>
                   <Link
                     href={`/book?origin=${encodeURIComponent(route.origin)}&destination=${encodeURIComponent(route.destination)}`}
                   >
                     <Button size="sm">Book</Button>
                   </Link>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-6 rounded-lg border border-dashed border-border p-5 text-sm text-muted-foreground">
+            Routes will appear here when they are published in the admin dashboard.
+          </p>
+        )}
       </section>
 
-      {/* WHY SMG */}
-      <section className="bg-cloud py-14">
-        <div className="container-page">
-          <h2 className="text-center text-2xl font-extrabold md:text-3xl">Why travel with SMG</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: Wallet, title: 'Affordable fares', body: 'Transparent pricing with no hidden charges — see your full breakdown before you pay.' },
-              { icon: ShieldCheck, title: 'Safe & reliable', body: 'Professional drivers, well-maintained buses and clear safety practices on every trip.' },
-              { icon: Armchair, title: 'Comfortable seats', body: 'Air-conditioned coaches with reclining seats and room to relax on longer journeys.' },
-              { icon: Clock, title: 'On your time', body: 'Choose departures that fit your schedule and reserve your exact seat in seconds.' },
-            ].map((f) => (
-              <Card key={f.title} className="h-full">
-                <CardContent className="p-6">
-                  <div className="grid size-11 place-items-center rounded-lg bg-navy text-gold">
-                    <f.icon className="size-5" />
-                  </div>
-                  <h3 className="mt-4 text-base font-bold">{f.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
-                </CardContent>
-              </Card>
+      <section className="border-y border-border bg-cloud py-12 md:py-14">
+        <div className="container-page grid gap-7 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+          <div>
+            <h2 className="text-2xl font-extrabold md:text-3xl">{site.homeBenefitsTitle}</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {site.homeBenefits.map((benefit) => (
+              <article key={benefit.title} className="rounded-lg border border-border bg-white p-5">
+                <h3 className="text-base font-extrabold text-navy">{benefit.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{benefit.body}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FLEET CATEGORIES */}
-      <section className="container-page py-14">
-        <div className="text-center">
-          <h2 className="text-2xl font-extrabold md:text-3xl">Travel your way</h2>
-          <p className="mt-2 text-muted-foreground">Choose the comfort level that suits your journey and budget.</p>
-        </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {[
-            { name: 'Standard', icon: Bus, perks: ['Air conditioning', 'USB charging', 'Reclining seats'], variant: 'outline' as const },
-            { name: 'Business', icon: Star, perks: ['Extra legroom', 'On-board WiFi', 'Refreshments'], variant: 'navy' as const },
-            { name: 'VIP Executive', icon: Star, perks: ['Lounger seats', 'Entertainment', 'Priority boarding'], variant: 'gold' as const },
-          ].map((tier) => (
-            <Card key={tier.name} className="flex h-full flex-col">
-              <CardContent className="flex flex-1 flex-col p-6">
-                <Badge variant={tier.variant} className="w-fit">{tier.name}</Badge>
-                <tier.icon className="mt-4 size-7 text-navy" />
-                <ul className="mt-4 flex-1 space-y-2 text-sm text-muted-foreground">
-                  {tier.perks.map((p) => (
-                    <li key={p} className="flex items-center gap-2">
-                      <CheckCircle2 className="size-4 text-gold" /> {p}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/fleet" className="mt-5">
-                  <Button variant="outline" className="w-full">Explore the fleet</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section className="bg-navy py-14 text-white">
-        <div className="container-page">
-          <h2 className="text-center text-2xl font-extrabold text-white md:text-3xl">Book in three simple steps</h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              { n: 1, icon: MapPin, title: 'Search your trip', body: 'Pick your route, date and number of passengers, then compare departures.' },
-              { n: 2, icon: Armchair, title: 'Choose your seat', body: 'Select your exact seat on an interactive map and add passenger details.' },
-              { n: 3, icon: QrCode, title: 'Pay & get your ticket', body: 'Pay securely and receive an instant e-ticket with a QR code for boarding.' },
-            ].map((s) => (
-              <div key={s.n} className="rounded-lg border border-white/10 bg-white/5 p-6">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-9 place-items-center rounded-full bg-gold font-bold text-navy">{s.n}</span>
-                  <s.icon className="size-5 text-gold" />
-                </div>
-                <h3 className="mt-4 font-bold text-white">{s.title}</h3>
-                <p className="mt-2 text-sm text-white/70">{s.body}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link href="/book"><Button size="lg">Start booking</Button></Link>
-          </div>
-        </div>
-      </section>
-
-      {/* PROMO BANNER (driven by the active promotion managed in the admin panel) */}
       {activePromo && (
-        <section className="container-page py-14">
-          <div className="overflow-hidden rounded-xl bg-gold">
-            <div className="flex flex-col items-start justify-between gap-4 p-8 md:flex-row md:items-center">
-              <div>
-                <h3 className="font-heading text-2xl font-extrabold text-navy">{activePromo.title}</h3>
-                <p className="mt-1 text-navy/80">
-                  Use code <strong>{activePromo.code}</strong> at checkout. {activePromo.description}
-                </p>
-              </div>
-              <Link href="/promotions"><Button variant="navy" size="lg">See all promotions</Button></Link>
+        <section className="container-page py-12">
+          <div className="rounded-lg border border-gold-200 bg-gold-50 p-6 md:flex md:items-center md:justify-between md:gap-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-navy">{activePromo.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-navy/75">
+                Use code <strong>{activePromo.code}</strong>. {activePromo.description}
+              </p>
             </div>
+            <Link href="/promotions" className="mt-4 inline-flex md:mt-0">
+              <Button variant="navy">See promotions</Button>
+            </Link>
           </div>
         </section>
       )}
 
-      {/* MOBILE EXPERIENCE */}
-      <section className="container-page py-14">
-        <div className="grid items-center gap-10 lg:grid-cols-2">
-          <div>
-            <Badge variant="navy" className="mb-3">Built for mobile</Badge>
-            <h2 className="text-2xl font-extrabold md:text-3xl">Book on the go, even on slower networks</h2>
-            <p className="mt-3 text-muted-foreground">
-              SMG is designed mobile-first and optimised for Ghanaian network conditions — light pages,
-              fast loading and a booking flow that keeps your progress.
-            </p>
-            <ul className="mt-5 space-y-3 text-sm">
-              <li className="flex items-center gap-3"><Smartphone className="size-5 text-gold" /> Responsive on small Android phones and iPhones</li>
-              <li className="flex items-center gap-3"><CreditCard className="size-5 text-gold" /> Mobile Money, Visa and Mastercard</li>
-              <li className="flex items-center gap-3"><QrCode className="size-5 text-gold" /> QR e-tickets you can show or print</li>
-            </ul>
+      {faqs.length > 0 && (
+        <section className="container-page max-w-3xl py-12 md:py-14">
+          <div className="text-center">
+            <h2 className="text-2xl font-extrabold md:text-3xl">{site.homeFaqTitle}</h2>
+            {site.homeFaqIntro && <p className="mt-2 text-muted-foreground">{site.homeFaqIntro}</p>}
           </div>
-          <div className="rounded-xl border border-border bg-cloud p-8">
-            <div className="mx-auto max-w-xs rounded-2xl border border-border bg-white p-4 shadow-card">
-              <div className="rounded-lg bg-navy p-4 text-white">
-                <p className="text-xs text-white/70">Your e-ticket</p>
-                <p className="font-heading text-lg font-bold">Cape Coast → Accra</p>
-                <p className="text-sm text-white/80">Seat 2A · 10:30</p>
-              </div>
-              <div className="mt-4 grid place-items-center">
-                <QrCode className="size-24 text-navy" />
-              </div>
-              <p className="mt-2 text-center text-xs text-muted-foreground">SMG-XXXXXXXX</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ PREVIEW */}
-      <section className="bg-cloud py-14">
-        <div className="container-page max-w-3xl">
-          <h2 className="text-center text-2xl font-extrabold md:text-3xl">Frequently asked questions</h2>
-          <div className="mt-8 space-y-3">
-            {faqs.map((f) => (
-              <details key={f.id} className="group rounded-lg border border-border bg-white p-4">
+          <div className="mt-7 space-y-3">
+            {faqs.map((faq) => (
+              <details key={faq.id} className="group rounded-lg border border-border bg-white p-4">
                 <summary className="cursor-pointer list-none font-semibold text-navy [&::-webkit-details-marker]:hidden">
-                  {f.question}
+                  {faq.question}
                 </summary>
-                <p className="mt-2 text-sm text-muted-foreground">{f.answer}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{faq.answer}</p>
               </details>
             ))}
           </div>
           <div className="mt-6 text-center">
-            <Link href="/faq"><Button variant="outline">See all FAQs</Button></Link>
+            <Link href="/faq">
+              <Button variant="outline">See all FAQs</Button>
+            </Link>
+          </div>
+        </section>
+      )}
+
+      <section className="container-page pb-14">
+        <div className="rounded-lg border border-border bg-navy p-6 text-white md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <h2 className="text-xl font-extrabold text-white">{site.homeSupportTitle}</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">{site.homeSupportBody}</p>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/85">
+              <span className="inline-flex items-center gap-2">
+                <Phone className="size-4 text-gold" />
+                {site.supportPhone}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <MessageCircle className="size-4 text-gold" />
+                {site.supportHours}
+              </span>
+            </div>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3 md:mt-0">
+            <Link href="/contact">
+              <Button>Contact us</Button>
+            </Link>
+            <Link href="/manage">
+              <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10">
+                Manage booking
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* SUPPORT CTA */}
-      <section className="container-page py-14">
-        <Card className="bg-navy text-white">
-          <CardContent className="flex flex-col items-center justify-between gap-4 p-8 text-center md:flex-row md:text-left">
-            <div>
-              <h3 className="font-heading text-xl font-bold text-white">Need help with a booking?</h3>
-              <p className="mt-1 text-white/75">
-                Our customer support team is here for you {site.supportHours}. Call {site.supportPhone}.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Link href="/contact"><Button>Contact us</Button></Link>
-              <Link href="/manage"><Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10">Manage booking</Button></Link>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
     </>
   );
 }

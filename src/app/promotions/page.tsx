@@ -12,7 +12,10 @@ export const metadata = buildRouteMetadata('/promotions');
 
 export default async function PromotionsPage() {
   const db = getDb();
-  const promos = (await db.listPromotions()).filter((p) => p.active);
+  const now = Date.now();
+  const promos = (await db.listPromotions()).filter(
+    (p) => p.active && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now,
+  );
 
   return (
     <>

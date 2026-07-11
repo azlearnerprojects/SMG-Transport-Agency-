@@ -52,8 +52,7 @@ export async function SiteFooter() {
             <Logo />
           </div>
           <p className="mt-4 max-w-sm text-sm text-white/70">
-            A youth-driven transport company making intercity travel across Ghana affordable,
-            reliable and comfortable.
+            {site.homeIntro}
           </p>
           <ul className="mt-5 space-y-2 text-sm">
             <li className="flex items-center gap-2">

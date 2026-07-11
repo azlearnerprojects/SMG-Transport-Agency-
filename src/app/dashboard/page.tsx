@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Ticket, CalendarClock, Clock, XCircle, User2, ShieldAlert } from 'lucide-react';
 import { useCustomerAuth } from '@/lib/auth/customer-auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton, Alert } from '@/components/ui/misc';
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const { user, loading, logout, updateProfile } = useCustomerAuth();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('upcoming');
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
@@ -29,16 +31,40 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    setName(user.fullName);
-    setPhone(user.phone);
-    fetch('/api/customer/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: user.email }),
-    })
-      .then((r) => r.json())
-      .then((j) => setBookings(j.data?.bookings ?? []))
-      .catch(() => setBookings([]));
+    const currentUser = user;
+    setName(currentUser.fullName);
+    setPhone(currentUser.phone);
+    async function loadBookings() {
+      setBookings(null);
+      setBookingsError(null);
+      const isFirebaseUser = currentUser.provider === 'firebase';
+      const auth = isFirebaseUser ? await getFirebaseAuth() : null;
+      const token = await auth?.currentUser?.getIdToken().catch(() => undefined);
+      if (isFirebaseUser && !token) {
+        setBookings([]);
+        setBookingsError('We could not verify your sign-in. Please sign out and sign in again.');
+        return;
+      }
+      const res = await fetch('/api/customer/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(currentUser.provider === 'demo' ? { email: currentUser.email } : {}),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setBookings([]);
+        setBookingsError(json.error ?? 'Could not load your bookings. Please try again.');
+        return;
+      }
+      setBookings(json.data?.bookings ?? []);
+    }
+    loadBookings().catch(() => {
+      setBookings([]);
+      setBookingsError('Could not load your bookings. Please check your connection and try again.');
+    });
   }, [user]);
 
   if (loading || !user) {
@@ -96,6 +122,8 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
+
+          {bookingsError && <Alert variant="warning" className="mt-4">{bookingsError}</Alert>}
 
           <div className="mt-4 space-y-3">
             {bookings === null ? (
@@ -171,7 +199,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
           <Alert variant="info">
-            <span className="text-xs">Bookings here are matched by your email. Guest bookings made with this email also appear.</span>
+            <span className="text-xs">
+              {user.provider === 'demo'
+                ? 'Demo bookings are matched by email so the sample dashboard stays easy to explore.'
+                : 'This dashboard shows trips booked while signed in. Guest bookings can still be managed by reference and contact detail.'}
+            </span>
           </Alert>
         </aside>
       </div>

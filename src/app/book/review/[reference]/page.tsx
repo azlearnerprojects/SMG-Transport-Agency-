@@ -46,7 +46,17 @@ export default async function ReviewPage({ params }: { params: Promise<{ referen
               <CardTitle>Payment</CardTitle>
             </CardHeader>
             <CardContent>
-              <PaymentPanel reference={booking.reference} total={booking.total} />
+              <PaymentPanel
+                reference={booking.reference}
+                total={booking.total}
+                currency={booking.currency}
+                origin={booking.origin}
+                destination={booking.destination}
+                seatCategory={booking.seatCategory}
+                seatCount={booking.seatIds.length}
+                travelDate={booking.travelDate}
+                promoCode={booking.promoCode}
+              />
             </CardContent>
           </Card>
         </aside>

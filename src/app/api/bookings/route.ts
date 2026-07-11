@@ -1,6 +1,8 @@
 import { getDb } from '@/lib/db';
 import { createBookingSchema } from '@/lib/schemas';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
+import { verifyFirebaseBearer } from '@/lib/auth/firebase-request';
+import { DEMO_MODE } from '@/lib/config';
 import { z } from 'zod';
 
 const bodySchema = createBookingSchema.extend({ holdId: z.string().min(1) });
@@ -12,6 +14,20 @@ const bodySchema = createBookingSchema.extend({ holdId: z.string().min(1) });
  */
 export const POST = withErrorHandling(async (req: Request) => {
   const body = bodySchema.parse(await req.json());
+  let firebaseUser: Awaited<ReturnType<typeof verifyFirebaseBearer>> = null;
+
+  if (!DEMO_MODE) {
+    try {
+      firebaseUser = await verifyFirebaseBearer(req);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('not configured')) {
+        return jsonError('Customer sign-in is temporarily unavailable. Please continue as a guest.', 503);
+      }
+      return jsonError('Your sign-in could not be verified. Please sign in again or continue as a guest.', 401);
+    }
+  }
+
   const db = getDb();
   const result = await db.createBooking({
     scheduleId: body.scheduleId,
@@ -30,6 +46,7 @@ export const POST = withErrorHandling(async (req: Request) => {
     holdId: body.holdId,
     sessionId: body.sessionId,
     promoCode: body.promoCode || undefined,
+    customerId: firebaseUser?.uid,
   });
   if (!result.ok) return jsonError(result.error ?? 'Could not create booking.', 409);
   return jsonOk({ booking: result.booking });

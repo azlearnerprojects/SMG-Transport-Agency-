@@ -1,8 +1,23 @@
 import type { Metadata, MetadataRoute } from 'next';
 import type { PublicSiteConfig } from './types';
-import { BRAND } from './config';
+import { APP_URL, BRAND } from './config';
 
-export const CANONICAL_SITE_URL = 'https://smgagencygh.com';
+export function normalizeSiteUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return 'http://localhost:3000';
+
+  try {
+    const url = new URL(trimmed);
+    url.hash = '';
+    url.search = '';
+    const pathname = url.pathname.replace(/\/+$/, '');
+    return `${url.origin}${pathname ? pathname : ''}`;
+  } catch {
+    return 'http://localhost:3000';
+  }
+}
+
+export const CANONICAL_SITE_URL = normalizeSiteUrl(APP_URL);
 export const DEFAULT_OG_IMAGE = '/brand/social-share.png';
 export const LOGO_IMAGE = '/brand/smg-logo.png';
 
@@ -140,6 +155,11 @@ export function absoluteUrl(path = '/'): string {
   return `${CANONICAL_SITE_URL}${normalizedPath}`;
 }
 
+export function serializeJsonLd(value: unknown): string {
+  const serialized = JSON.stringify(value);
+  return serialized ? serialized.replace(/</g, '\\u003c') : '';
+}
+
 export function buildSeoMetadata({
   title,
   description,
@@ -221,6 +241,7 @@ export function buildHomeStructuredData(site: PublicSiteConfig) {
     site.socialTwitter,
     site.socialTiktok,
   ].filter(Boolean);
+  const description = site.homeIntro || HOME_SEO_DESCRIPTION;
 
   const postalAddress = stripEmpty({
     '@type': 'PostalAddress',
@@ -244,7 +265,7 @@ export function buildHomeStructuredData(site: PublicSiteConfig) {
     url: CANONICAL_SITE_URL,
     logo: absoluteUrl(LOGO_IMAGE),
     image: absoluteUrl(DEFAULT_OG_IMAGE),
-    description: HOME_SEO_DESCRIPTION,
+    description,
     email: site.supportEmail,
     telephone: site.supportPhone,
     address: postalAddress,
@@ -258,7 +279,7 @@ export function buildHomeStructuredData(site: PublicSiteConfig) {
     name: site.siteName,
     url: CANONICAL_SITE_URL,
     image: absoluteUrl(DEFAULT_OG_IMAGE),
-    description: HOME_SEO_DESCRIPTION,
+    description,
     priceRange: 'GHS',
     address: postalAddress,
     telephone: site.supportPhone,
@@ -281,7 +302,7 @@ export function buildHomeStructuredData(site: PublicSiteConfig) {
     '@id': `${CANONICAL_SITE_URL}/#website`,
     name: site.siteName,
     url: CANONICAL_SITE_URL,
-    description: HOME_SEO_DESCRIPTION,
+    description,
     publisher: {
       '@id': `${CANONICAL_SITE_URL}/#organization`,
     },

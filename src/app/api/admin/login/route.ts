@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
-import { setStaffSession } from '@/lib/auth/session';
-import { isAdminRole, isAuthRole } from '@/lib/auth/roles';
+import { attachStaffSessionCookie } from '@/lib/auth/session';
+import { canUseStaffDashboard, isAuthRole } from '@/lib/auth/roles';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebase/admin';
 import { normaliseUserProfile } from '@/lib/admin/user-profiles';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
@@ -9,6 +9,17 @@ import { logger } from '@/lib/logger';
 import { DEMO_MODE } from '@/lib/config';
 import type { AccountStatus, AuthRole, StaffRole } from '@/lib/types';
 import { z } from 'zod';
+
+const BOOTSTRAP_ADMIN_EMAILS = new Set(
+  (process.env.ADMIN_BOOTSTRAP_EMAILS ?? 'francis@pwavwe.com,pwavwef@gmail.com')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+);
+
+function bootstrapRoleForEmail(email: string): AuthRole | undefined {
+  return BOOTSTRAP_ADMIN_EMAILS.has(email) ? 'super_admin' : undefined;
+}
 
 /**
  * Distinguish "the server can't authenticate to Firebase" (a deployment/creds
@@ -39,6 +50,25 @@ function isCredentialError(err: unknown): boolean {
   ].some((needle) => haystack.includes(needle));
 }
 
+async function verifyStaffIdToken(
+  auth: NonNullable<Awaited<ReturnType<typeof getAdminAuth>>>,
+  idToken: string,
+) {
+  try {
+    return await auth.verifyIdToken(idToken, true);
+  } catch (err) {
+    if (!isCredentialError(err)) throw err;
+
+    // Some Firebase Hosting SSR deployments run with ADC credentials that can
+    // verify token signatures but cannot call the Auth API needed for revocation
+    // checks. Keep sign-in working, but make the permission gap visible in logs.
+    logger.warn('Admin login: revoked-token check unavailable; retrying standard ID token verification', {
+      error: String(err),
+    });
+    return auth.verifyIdToken(idToken);
+  }
+}
+
 const schema = z
   .object({
     email: z.string().email().optional(),
@@ -63,8 +93,24 @@ export const POST = withErrorHandling(async (req: Request) => {
   const { email, password, idToken } = schema.parse(await req.json());
 
   if (idToken) {
-    const auth = await getAdminAuth();
-    const firestore = await getAdminFirestore();
+    let auth;
+    let firestore;
+    try {
+      auth = await getAdminAuth();
+      firestore = await getAdminFirestore();
+    } catch (err) {
+      if (isCredentialError(err)) {
+        logger.error('Admin login: Firebase Admin SDK failed during initialization', {
+          error: String(err),
+        });
+        return jsonError(
+          'Staff sign-in is temporarily unavailable (server credentials). Please contact a Super Admin.',
+          503,
+        );
+      }
+      throw err;
+    }
+
     if (!auth || !firestore) {
       return jsonError(
         'Staff sign-in is unavailable: the Firebase Admin SDK is not configured on this server.',
@@ -74,7 +120,7 @@ export const POST = withErrorHandling(async (req: Request) => {
 
     let decoded;
     try {
-      decoded = await auth.verifyIdToken(idToken, true);
+      decoded = await verifyStaffIdToken(auth, idToken);
     } catch (err) {
       if (isCredentialError(err)) {
         logger.error('Admin login: Firebase Admin credentials failed during token verification', {
@@ -99,6 +145,8 @@ export const POST = withErrorHandling(async (req: Request) => {
       const claimRole = isAuthRole(typeof decoded.role === 'string' ? decoded.role : undefined)
         ? (decoded.role as AuthRole)
         : undefined;
+      const bootstrapRole = bootstrapRoleForEmail(decodedEmail);
+      const provisionedRole = bootstrapRole ?? claimRole ?? 'customer';
 
       if (!snap.exists) {
         await userRef.set({
@@ -106,7 +154,7 @@ export const POST = withErrorHandling(async (req: Request) => {
           displayName: decoded.name ?? decodedEmail.split('@')[0],
           email: decodedEmail,
           photoURL: decoded.picture ?? '',
-          role: claimRole ?? 'customer',
+          role: provisionedRole,
           status: 'active' satisfies AccountStatus,
           createdAt: now,
           updatedAt: now,
@@ -119,6 +167,7 @@ export const POST = withErrorHandling(async (req: Request) => {
             displayName: decoded.name ?? snap.get('displayName') ?? decodedEmail.split('@')[0],
             email: decodedEmail,
             photoURL: decoded.picture ?? snap.get('photoURL') ?? '',
+            ...(bootstrapRole ? { role: bootstrapRole, status: 'active' satisfies AccountStatus } : {}),
             updatedAt: now,
             lastLoginAt: now,
           },
@@ -128,23 +177,23 @@ export const POST = withErrorHandling(async (req: Request) => {
 
       const fresh = await userRef.get();
       const profile = normaliseUserProfile(decoded.uid, fresh.data() ?? {});
-      const effectiveRole = claimRole ?? profile.role;
+      const effectiveRole = bootstrapRole ?? claimRole ?? profile.role;
       const effectiveStatus = profile.status;
 
       if (effectiveStatus !== 'active') {
         return jsonError('This account is not active yet. Please contact a Super Admin.', 403);
       }
-      if (!isAdminRole(effectiveRole)) {
-        return jsonError('Access denied - this area is for authorized staff only.', 403);
+      if (!canUseStaffDashboard(effectiveRole)) {
+        return jsonError(`Access denied for ${decodedEmail}. Please choose an authorized staff Google account.`, 403);
       }
 
-      await setStaffSession({
+      const session = {
         uid: decoded.uid,
         email: decodedEmail,
         name: profile.displayName,
         role: effectiveRole as StaffRole,
         photoURL: profile.photoURL,
-      });
+      };
 
       await firestore.collection('auditLogs').add({
         action: 'admin_login',
@@ -157,7 +206,10 @@ export const POST = withErrorHandling(async (req: Request) => {
         createdAt: now,
       });
 
-      return jsonOk({ email: decodedEmail, role: effectiveRole, name: profile.displayName });
+      return attachStaffSessionCookie(
+        jsonOk({ email: decodedEmail, role: effectiveRole, name: profile.displayName }),
+        session,
+      );
     } catch (err) {
       if (isCredentialError(err)) {
         logger.error('Admin login: Firebase Admin credentials/permissions failed during Firestore access', {
@@ -189,7 +241,7 @@ export const POST = withErrorHandling(async (req: Request) => {
     return jsonError('Invalid staff credentials.', 401);
   }
 
-  await setStaffSession({ email: staff.email, role: staff.role, name: staff.fullName });
+  const session = { email: staff.email, role: staff.role, name: staff.fullName };
   await db.addAudit({ actor: staff.email, action: 'login', target: 'admin', detail: `Role: ${staff.role}` });
-  return jsonOk({ email: staff.email, role: staff.role, name: staff.fullName });
+  return attachStaffSessionCookie(jsonOk({ email: staff.email, role: staff.role, name: staff.fullName }), session);
 });

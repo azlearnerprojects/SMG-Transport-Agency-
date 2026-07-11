@@ -3,6 +3,7 @@ import { AdminConfigClient } from '@/components/admin/admin-config-client';
 import { AdminPageTitle, RestrictedNotice } from '@/components/admin/admin-ui';
 import { getStaffSession, roleAllowed } from '@/lib/auth/session';
 import { getPublicSiteConfig } from '@/lib/site-config';
+import { summarizeProductionReadiness } from '@/lib/production-readiness';
 
 export const metadata: Metadata = { title: 'Admin - Config' };
 
@@ -13,13 +14,17 @@ export default async function AdminConfigPage() {
   }
 
   const result = await getPublicSiteConfig();
+  const readiness = summarizeProductionReadiness({
+    siteConfig: result.config,
+    siteConfigConfigured: result.configured,
+  });
   return (
     <>
       <AdminPageTitle
         title="Admin Config"
         description="Manage safe public runtime settings, booking switches, provider flags, and customer support defaults."
       />
-      <AdminConfigClient initial={result.config} configured={result.configured} />
+      <AdminConfigClient initial={result.config} configured={result.configured} readiness={readiness} />
     </>
   );
 }

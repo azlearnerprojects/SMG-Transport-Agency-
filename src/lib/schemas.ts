@@ -118,14 +118,39 @@ export const busSchema = z.object({
   status: z.enum(['active', 'maintenance', 'archived']).default('active'),
 });
 
+export const seatLayoutTemplateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    rows: z.coerce.number().int().min(1).max(20),
+    leftSeats: z.coerce.number().int().min(1).max(3),
+    rightSeats: z.coerce.number().int().min(1).max(3),
+    vipRows: z.coerce.number().int().min(0).max(20).default(0),
+    businessRows: z.coerce.number().int().min(0).max(20).default(0),
+  })
+  .refine((layout) => layout.vipRows + layout.businessRows <= layout.rows, {
+    message: 'VIP and business rows cannot exceed total rows.',
+    path: ['businessRows'],
+  });
+
+export const fareCategoryConfigSchema = z.object({
+  key: seatCategorySchema,
+  label: z.string().trim().min(2).max(80),
+  description: z.string().trim().min(4).max(300),
+  active: z.boolean().default(true),
+  order: z.coerce.number().int().min(0).max(999),
+});
+
 export const routeSchema = z.object({
   code: z.string().trim().min(2),
   origin: z.string().trim().min(2),
   destination: z.string().trim().min(2),
+  originBoardingPointId: z.string().trim().optional().or(z.literal('')),
+  destinationBoardingPointId: z.string().trim().optional().or(z.literal('')),
   distanceKm: z.coerce.number().min(1),
   durationMinutes: z.coerce.number().min(15),
   description: z.string().trim().max(500).optional().or(z.literal('')),
   popular: z.boolean().default(false),
+  status: z.enum(['draft', 'active', 'archived']).default('draft'),
 });
 
 export const scheduleSchema = z.object({
@@ -141,4 +166,39 @@ export const scheduleSchema = z.object({
   }),
   serviceFee: z.coerce.number().min(0),
   status: z.enum(['scheduled', 'paused', 'cancelled', 'departed', 'completed']).default('scheduled'),
+});
+
+export const promotionSchema = z.object({
+  code: z.string().trim().min(2).max(30).transform((value) => value.toUpperCase()),
+  title: z.string().trim().min(2).max(120),
+  description: z.string().trim().min(4).max(500),
+  type: z.enum(['percent', 'flat']),
+  value: z.coerce.number().min(0),
+  active: z.boolean().default(false),
+  startsAt: z.string().min(1),
+  endsAt: z.string().min(1),
+  routeIds: z.array(z.string()).default([]),
+});
+
+export const faqSchema = z.object({
+  question: z.string().trim().min(5).max(180),
+  answer: z.string().trim().min(8).max(1000),
+  category: z.string().trim().min(2).max(80),
+  order: z.coerce.number().int().min(0).max(999),
+  published: z.boolean().default(false),
+});
+
+export const announcementSchema = z.object({
+  title: z.string().trim().min(2).max(120),
+  body: z.string().trim().min(4).max(500),
+  level: z.enum(['info', 'success', 'warning']).default('info'),
+  active: z.boolean().default(false),
+  publishedAt: z.string().min(1),
+});
+
+export const contentPageSchema = z.object({
+  slug: z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only.'),
+  title: z.string().trim().min(2).max(120),
+  body: z.string().trim().min(10).max(8000),
+  published: z.boolean().default(false),
 });

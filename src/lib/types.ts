@@ -7,6 +7,7 @@
 
 export type SeatCategory = 'standard' | 'business' | 'vip';
 export type BusCategory = 'standard' | 'business' | 'vip';
+export type RouteStatus = 'draft' | 'active' | 'archived';
 
 export type BusStatus = 'active' | 'maintenance' | 'archived';
 
@@ -97,6 +98,15 @@ export interface SeatLayout extends Timestamps {
   capacity: number;
 }
 
+export interface FareCategoryConfig extends Timestamps {
+  id: SeatCategory;
+  key: SeatCategory;
+  label: string;
+  description: string;
+  active: boolean;
+  order: number;
+}
+
 export interface Bus extends Timestamps {
   id: string;
   busNumber: string;
@@ -128,6 +138,7 @@ export interface Route extends Timestamps {
   durationMinutes: number;
   description: string;
   popular: boolean;
+  status?: RouteStatus;
 }
 
 /** Base fares per seat category for a given departure. */
@@ -355,9 +366,25 @@ export interface SystemSettings {
 export type PaymentGatewayMode = 'test' | 'live';
 export type ChatbotTone = 'friendly' | 'professional' | 'concise' | 'playful';
 
+export interface LandingBenefit {
+  title: string;
+  body: string;
+}
+
 export interface PublicSiteConfig {
   siteName: string;
   tagline: string;
+  homeEyebrow: string;
+  homeIntro: string;
+  homeHighlights: string[];
+  homeRoutesTitle: string;
+  homeRoutesIntro: string;
+  homeBenefitsTitle: string;
+  homeBenefits: LandingBenefit[];
+  homeFaqTitle: string;
+  homeFaqIntro: string;
+  homeSupportTitle: string;
+  homeSupportBody: string;
   supportPhone: string;
   supportWhatsapp: string;
   supportEmail: string;
@@ -402,6 +429,23 @@ export interface ChatbotRuntimeConfig {
   escalationWhatsapp: string;
   responseTone: ChatbotTone;
   updatedAt: string;
+}
+
+export type ProductionReadinessStatus = 'pass' | 'warning' | 'fail';
+
+export interface ProductionReadinessCheck {
+  id: string;
+  label: string;
+  status: ProductionReadinessStatus;
+  message: string;
+  help?: string;
+}
+
+export interface ProductionReadinessSummary {
+  ready: boolean;
+  generatedAt: string;
+  counts: Record<ProductionReadinessStatus, number>;
+  checks: ProductionReadinessCheck[];
 }
 
 export interface ChatSession extends Timestamps {

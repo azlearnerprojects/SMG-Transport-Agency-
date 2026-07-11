@@ -1,111 +1,85 @@
-import Image from 'next/image';
-import { Target, Eye, HeartHandshake, Sparkles, ShieldCheck, Users } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+import { getDb } from '@/lib/db';
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { buildRouteMetadata } from '@/lib/seo';
 
 export const metadata = buildRouteMetadata('/about');
 
-const VALUES = [
-  { icon: ShieldCheck, title: 'Safety first', body: 'Well-maintained buses and professional drivers on every journey.' },
-  { icon: HeartHandshake, title: 'Customer-friendly', body: 'Warm, helpful service from booking to arrival.' },
-  { icon: Sparkles, title: 'Transparency', body: 'Clear prices, timings and policies with no surprises.' },
-  { icon: Users, title: 'Youth energy', body: 'Bold, ambitious and driven to keep improving.' },
-];
+function Paragraphs({ body }: { body: string }) {
+  return (
+    <div className="space-y-4 leading-7 text-navy/80">
+      {body
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean)
+        .map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+    </div>
+  );
+}
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const db = getDb();
+  const [about, mission, vision, values] = await Promise.all([
+    db.getContentPage('about'),
+    db.getContentPage('mission'),
+    db.getContentPage('vision'),
+    db.getContentPage('values'),
+  ]);
+
+  const visibleAbout = about?.published ? about : undefined;
+  const sections = [mission, vision, values].filter((page) => page?.published);
+
   return (
     <>
       <PageHeader
-        title="About SMG Transport Agency"
-        subtitle="A youth-driven transport company reimagining intercity travel across Ghana."
+        title={visibleAbout?.title ?? 'About SMG Transport Agency'}
+        subtitle="Company information is managed from the admin dashboard."
       />
 
       <div className="container-page py-12">
-        <div className="grid items-start gap-10 lg:grid-cols-[1.4fr_1fr]">
-          <div className="space-y-4 text-navy/80">
-            <h2 className="text-2xl font-extrabold text-navy">Our story</h2>
-            <p>
-              SMG Transport Agency was founded by Gabriel Atuobi, a University of Cape Coast graduate, with a
-              bold vision: to redefine intercity and intra-city transportation in Ghana.
-            </p>
-            <p>
-              We are building a travel experience that is affordable, reliable, comfortable and genuinely
-              customer-friendly, especially for students, young professionals, families and everyday travellers.
-            </p>
-            <p>
-              This digital booking platform is part of that mission: real-time seat selection, transparent pricing,
-              secure payments and instant e-tickets that customers can use from their phone or computer.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              We are your travel partner, not just a transport company.
-            </p>
+        {visibleAbout ? (
+          <div className="max-w-3xl">
+            <Paragraphs body={visibleAbout.body} />
           </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border bg-white p-10 text-center">
+            <p className="font-semibold text-navy">Company content is being updated</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Please contact SMG support for company details while this page is prepared.
+            </p>
+            <Link href="/contact" className="mt-5 inline-flex">
+              <Button variant="outline">Contact support</Button>
+            </Link>
+          </div>
+        )}
 
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className="relative aspect-[4/5] bg-cloud">
-                <Image
-                  src="/images/people/gabriel-atuobi.jpeg"
-                  alt="Gabriel Atuobi, Founder of SMG Transport Agency"
-                  fill
-                  sizes="(min-width: 1024px) 360px, 100vw"
-                  className="object-cover object-top"
-                  priority
-                />
-              </div>
-              <div className="p-6">
-                <p className="font-heading text-lg font-bold text-navy">Gabriel Atuobi</p>
-                <p className="text-sm text-muted-foreground">Founder &amp; Student Chief Executive Officer</p>
-                <p className="mt-3 text-sm text-navy/80">
-                  &ldquo;Every journey should be stress-free, affordable and comfortable. That belief drives
-                  everything we build.&rdquo;
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-14 grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-navy">
-                <Target className="size-5 text-gold" />
-                <h3 className="font-heading text-lg font-bold">Our mission</h3>
-              </div>
-              <p className="mt-2 text-sm text-navy/80">
-                To redefine intercity travel in Ghana with technology, transparency and genuine customer care,
-                delivering safe, affordable and comfortable journeys for everyone.
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2 text-navy">
-                <Eye className="size-5 text-gold" />
-                <h3 className="font-heading text-lg font-bold">Our vision</h3>
-              </div>
-              <p className="mt-2 text-sm text-navy/80">
-                To become a trusted, technology-led transport brand connecting Ghanaian cities and communities,
-                known for reliability and a customer-first experience.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <h3 className="mt-14 text-center text-2xl font-extrabold text-navy">What we value</h3>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {VALUES.map((v) => (
-            <Card key={v.title}>
-              <CardContent className="p-6">
-                <div className="grid size-11 place-items-center rounded-lg bg-navy text-gold">
-                  <v.icon className="size-5" />
+        {sections.length > 0 && (
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {sections.map((page) => (
+              <section key={page!.id} className="rounded-lg border border-border bg-white p-6 shadow-card">
+                <h2 className="text-xl font-extrabold text-navy">{page!.title}</h2>
+                <div className="mt-3 text-sm leading-6 text-muted-foreground">
+                  <Paragraphs body={page!.body} />
                 </div>
-                <h4 className="mt-4 font-bold text-navy">{v.title}</h4>
-                <p className="mt-2 text-sm text-muted-foreground">{v.body}</p>
-              </CardContent>
-            </Card>
-          ))}
+              </section>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-12 rounded-lg border border-border bg-cloud p-6 md:flex md:items-center md:justify-between md:gap-6">
+          <div>
+            <h2 className="text-xl font-extrabold text-navy">Ready to travel?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Search published routes and departures from the booking page.</p>
+          </div>
+          <Link href="/book" className="mt-5 inline-flex md:mt-0">
+            <Button>
+              Book a trip <ArrowRight className="size-4" />
+            </Button>
+          </Link>
         </div>
       </div>
     </>

@@ -1,9 +1,10 @@
 import crypto from 'node:crypto';
 import type { InitializeParams, InitializeResult, PaymentProvider, VerifyResult } from './types';
 import type { PaymentMethod } from '@/lib/types';
+import { getPaystackConfig } from '@/lib/config';
 
 /**
- * Paystack adapter (TEST MODE first).
+ * Paystack adapter.
  *
  * Uses the Paystack REST API. Amounts are sent in the minor unit (pesewas), i.e.
  * GHS * 100. The secret key NEVER reaches the browser — this module is only
@@ -30,12 +31,12 @@ function methodToChannels(method: PaymentMethod): string[] {
 export class PaystackProvider implements PaymentProvider {
   readonly name = 'paystack';
   private readonly secret: string;
+  private readonly webhookSecret: string;
 
   constructor() {
-    this.secret = process.env.PAYSTACK_SECRET_KEY ?? '';
-    if (!this.secret) {
-      throw new Error('PAYSTACK_SECRET_KEY is not set. See PAYMENT_SETUP.md.');
-    }
+    const config = getPaystackConfig();
+    this.secret = config.secretKey;
+    this.webhookSecret = config.webhookSecret;
   }
 
   private headers() {
@@ -94,7 +95,7 @@ export class PaystackProvider implements PaymentProvider {
 
   verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
     if (!signature) return false;
-    const hash = crypto.createHmac('sha512', this.secret).update(rawBody).digest('hex');
+    const hash = crypto.createHmac('sha512', this.webhookSecret).update(rawBody).digest('hex');
     // Constant-time compare to avoid timing attacks.
     const a = Buffer.from(hash);
     const b = Buffer.from(signature);

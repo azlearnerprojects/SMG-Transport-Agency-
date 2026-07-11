@@ -9,13 +9,13 @@ import { Button } from '@/components/ui/button';
 import { useCustomerAuth } from '@/lib/auth/customer-auth';
 import { cn } from '@/lib/utils';
 
+// Keep the top nav to the core customer journey; Deals and Contact stay
+// reachable from the homepage sections and the footer.
 const NAV = [
-  { href: '/book', label: 'Book a Trip' },
-  { href: '/routes', label: 'Routes & Schedules' },
-  { href: '/fleet', label: 'Our Fleet' },
-  { href: '/promotions', label: 'Promotions' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/book', label: 'Book' },
+  { href: '/routes', label: 'Routes' },
+  { href: '/manage', label: 'Manage' },
+  { href: '/faq', label: 'Help' },
 ];
 
 export function SiteHeader() {
@@ -27,7 +27,7 @@ export function SiteHeader() {
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <Logo />
 
@@ -37,8 +37,8 @@ export function SiteHeader() {
               key={item.href}
               href={item.href}
               className={cn(
-                'rounded-md px-3 py-2 text-sm font-medium text-navy/80 transition-colors hover:bg-navy/5 hover:text-navy',
-                pathname.startsWith(item.href) && 'text-navy font-semibold',
+                'rounded-md px-3 py-2 text-sm font-semibold text-navy/75 transition-colors hover:bg-navy/5 hover:text-navy',
+                pathname.startsWith(item.href) && 'bg-navy/5 text-navy',
               )}
             >
               {item.label}
@@ -66,7 +66,7 @@ export function SiteHeader() {
             </Link>
           )}
           <Link href="/book">
-            <Button size="sm">Book Now</Button>
+            <Button size="sm">Book Trip</Button>
           </Link>
         </div>
 
@@ -100,7 +100,7 @@ export function SiteHeader() {
                 </Button>
               </Link>
               <Link href="/book">
-                <Button className="w-full">Book Now</Button>
+                <Button className="w-full">Book Trip</Button>
               </Link>
             </div>
           </nav>
