@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X, LogOut, ExternalLink } from 'lucide-react';
-import { ADMIN_NAV } from '@/lib/admin-nav';
+import { activeSection, visibleChildren, visibleSections } from '@/lib/admin-nav';
 import { Logo } from '@/components/layout/logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,9 +26,9 @@ export function AdminShell({
   const [open, setOpen] = useState(false);
 
   // Server-side role checks remain authoritative; this only hides irrelevant links.
-  const visible = ADMIN_NAV.filter(
-    (item) => role === 'super_admin' || role === 'admin' || item.roles.includes(role) || item.href === '/admin',
-  );
+  const sections = visibleSections(role);
+  const current = activeSection(pathname);
+  const subTabs = current ? visibleChildren(current, role) : [];
 
   async function logout() {
     await fetch('/api/admin/logout', { method: 'POST' }).catch(() => undefined);
@@ -37,7 +37,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="min-h-screen bg-cloud">
+    <div className="flex min-h-screen flex-col bg-cloud">
       {/* Topbar */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-navy px-4 text-white">
         <div className="flex items-center gap-3">
@@ -63,28 +63,31 @@ export function AdminShell({
         </div>
       </header>
 
-      <div className="flex">
-        {/* Sidebar */}
+      <div className="flex flex-1">
+        {/* Sidebar — scrolls independently of the page content on desktop */}
         <aside
           className={cn(
-            'fixed inset-y-16 left-0 z-20 w-64 overflow-y-auto border-r border-border bg-white p-3 transition-transform lg:static lg:inset-auto lg:translate-x-0',
+            // Mobile: off-canvas drawer pinned below the 64px header (inset-y-16 sets top+bottom).
+            'fixed inset-y-16 left-0 z-20 w-64 shrink-0 overflow-y-auto border-r border-border bg-white p-3 transition-transform',
+            // Desktop: sticky column that keeps top:4rem (from inset-y-16) and scrolls independently.
+            'lg:sticky lg:bottom-auto lg:left-auto lg:h-[calc(100vh-4rem)] lg:translate-x-0',
             open ? 'translate-x-0' : '-translate-x-full',
           )}
         >
           <nav className="space-y-1">
-            {visible.map((item) => {
-              const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+            {sections.map((section) => {
+              const active = current?.href === section.href;
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={section.href}
+                  href={section.href}
                   onClick={() => setOpen(false)}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                     active ? 'bg-navy text-white' : 'text-navy hover:bg-navy/5',
                   )}
                 >
-                  <item.icon className="size-4" /> {item.label}
+                  <section.icon className="size-4" /> {section.label}
                 </Link>
               );
             })}
@@ -95,8 +98,34 @@ export function AdminShell({
         </aside>
 
         {/* Content */}
-        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        <main className="min-w-0 flex-1">
+          {subTabs.length > 1 && (
+            <div className="sticky top-16 z-10 border-b border-border bg-cloud/95 backdrop-blur">
+              <nav className="flex gap-1 overflow-x-auto px-4 py-2 sm:px-6">
+                {subTabs.map((tab) => {
+                  const active = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+                  return (
+                    <Link
+                      key={tab.href}
+                      href={tab.href}
+                      className={cn(
+                        'whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                        active ? 'bg-navy text-white' : 'text-navy hover:bg-navy/10',
+                      )}
+                    >
+                      {tab.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
+          <div className="p-4 sm:p-6">{children}</div>
+        </main>
       </div>
+
+      {/* Backdrop for the mobile drawer */}
+      {open && <div className="fixed inset-0 top-16 z-10 bg-navy/40 lg:hidden" onClick={() => setOpen(false)} />}
     </div>
   );
 }

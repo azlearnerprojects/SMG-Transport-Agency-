@@ -55,6 +55,7 @@ export const createBookingSchema = z.object({
   seatIds: z.array(z.string().min(1)).min(1, 'Select at least one seat').max(5),
   seatCategory: seatCategorySchema,
   passenger: passengerSchema,
+  boardingPoint: z.string().trim().min(2, 'Select a pickup point').max(120),
   promoCode: z.string().trim().max(30).optional().or(z.literal('')),
   sessionId: z.string().min(1),
   consent: z.literal(true, {

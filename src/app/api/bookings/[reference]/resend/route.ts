@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { sendTicketEmail } from '@/lib/email';
+import { sendTicketResendSms } from '@/lib/sms';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 /** POST /api/bookings/[reference]/resend — re-send the e-ticket email. */
@@ -16,7 +17,16 @@ export const POST = withErrorHandling(
     if (booking.status !== 'confirmed' && booking.status !== 'checked_in') {
       return jsonError('Tickets are only available for confirmed bookings.', 409);
     }
-    const result = await sendTicketEmail(booking);
-    return jsonOk({ delivered: result.delivered, to: booking.passenger.email });
+    const [email, sms] = await Promise.all([
+      sendTicketEmail(booking),
+      sendTicketResendSms(booking),
+    ]);
+    return jsonOk({
+      delivered: email.delivered || sms.delivered,
+      emailDelivered: email.delivered,
+      smsDelivered: sms.delivered,
+      to: booking.passenger.email,
+      phone: booking.passenger.phone,
+    });
   },
 );

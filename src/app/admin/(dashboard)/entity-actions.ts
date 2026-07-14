@@ -4,17 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { getDb, type DeletableEntity } from '@/lib/db';
 import { getStaffSession, roleAllowed } from '@/lib/auth/session';
 import {
-  announcementSchema,
   busSchema,
-  contentPageSchema,
   fareCategoryConfigSchema,
-  faqSchema,
-  promotionSchema,
   routeSchema,
   scheduleSchema,
   seatLayoutTemplateSchema,
 } from '@/lib/schemas';
 import { buildSeatLayoutTemplate } from '@/lib/seat-layouts';
+import { getBusDeletionConflict } from '@/lib/admin/delete-guards';
 import type { StaffRole } from '@/lib/types';
 
 function idFrom(formData: FormData) {
@@ -188,95 +185,6 @@ export async function saveSchedule(formData: FormData) {
   revalidatePath('/book');
 }
 
-export async function savePromotion(formData: FormData) {
-  const session = await requireRole(['content_editor', 'operations_manager']);
-  const parsed = promotionSchema.parse({
-    code: formData.get('code'),
-    title: formData.get('title'),
-    description: formData.get('description'),
-    type: formData.get('type'),
-    value: formData.get('value'),
-    active: boolFrom(formData, 'active'),
-    startsAt: formData.get('startsAt'),
-    endsAt: formData.get('endsAt'),
-    routeIds: formData.getAll('routeIds').map(String).filter(Boolean),
-  });
-  const db = getDb();
-  const record = await db.upsertPromotion(idFrom(formData), parsed);
-  await db.addAudit({
-    actor: session.email,
-    action: idFrom(formData) ? 'promotion.updated' : 'promotion.created',
-    target: record.id,
-    detail: `${record.code} (${record.active ? 'active' : 'inactive'})`,
-  });
-  revalidatePath('/admin/promotions');
-  revalidatePath('/');
-  revalidatePath('/promotions');
-}
-
-export async function saveFaq(formData: FormData) {
-  const session = await requireRole(['content_editor']);
-  const parsed = faqSchema.parse({
-    question: formData.get('question'),
-    answer: formData.get('answer'),
-    category: formData.get('category'),
-    order: formData.get('order'),
-    published: boolFrom(formData, 'published'),
-  });
-  const db = getDb();
-  const record = await db.upsertFaq(idFrom(formData), parsed);
-  await db.addAudit({
-    actor: session.email,
-    action: idFrom(formData) ? 'faq.updated' : 'faq.created',
-    target: record.id,
-    detail: record.question,
-  });
-  revalidatePath('/admin/faqs');
-  revalidatePath('/');
-  revalidatePath('/faq');
-}
-
-export async function saveAnnouncement(formData: FormData) {
-  const session = await requireRole(['content_editor', 'customer_support']);
-  const parsed = announcementSchema.parse({
-    title: formData.get('title'),
-    body: formData.get('body'),
-    level: formData.get('level'),
-    active: boolFrom(formData, 'active'),
-    publishedAt: formData.get('publishedAt'),
-  });
-  const db = getDb();
-  const record = await db.upsertAnnouncement(idFrom(formData), parsed);
-  await db.addAudit({
-    actor: session.email,
-    action: idFrom(formData) ? 'announcement.updated' : 'announcement.created',
-    target: record.id,
-    detail: `${record.title} (${record.active ? 'active' : 'inactive'})`,
-  });
-  revalidatePath('/admin/announcements');
-  revalidatePath('/');
-}
-
-export async function saveContentPage(formData: FormData) {
-  const session = await requireRole(['content_editor']);
-  const parsed = contentPageSchema.parse({
-    slug: formData.get('slug'),
-    title: formData.get('title'),
-    body: formData.get('body'),
-    published: boolFrom(formData, 'published'),
-  });
-  const db = getDb();
-  const record = await db.upsertContentPage(idFrom(formData), parsed);
-  await db.addAudit({
-    actor: session.email,
-    action: idFrom(formData) ? 'content.updated' : 'content.created',
-    target: record.id,
-    detail: record.slug,
-  });
-  revalidatePath('/admin/content');
-  revalidatePath(`/${record.slug}`);
-}
-
 /* ------------------------------------------------------------------ */
 /* Delete actions                                                     */
 /* ------------------------------------------------------------------ */
@@ -326,9 +234,8 @@ export async function deleteBus(formData: FormData) {
     roles: ['operations_manager'],
     guard: async (id, db) => {
       const schedules = await db.listSchedules();
-      return schedules.some((s) => s.busId === id)
-        ? 'This bus is still assigned to schedules. Delete or reassign its schedules first.'
-        : undefined;
+      const today = new Date().toISOString().slice(0, 10);
+      return getBusDeletionConflict(id, schedules, today);
     },
     revalidate: ['/admin/buses', '/fleet', '/book'],
   });
@@ -361,30 +268,3 @@ export async function deleteSchedule(formData: FormData) {
   });
 }
 
-export async function deletePromotion(formData: FormData) {
-  await deleteEntity('promotion', formData, {
-    roles: ['content_editor', 'operations_manager'],
-    revalidate: ['/admin/promotions', '/', '/promotions'],
-  });
-}
-
-export async function deleteFaq(formData: FormData) {
-  await deleteEntity('faq', formData, {
-    roles: ['content_editor'],
-    revalidate: ['/admin/faqs', '/', '/faq'],
-  });
-}
-
-export async function deleteAnnouncement(formData: FormData) {
-  await deleteEntity('announcement', formData, {
-    roles: ['content_editor', 'customer_support'],
-    revalidate: ['/admin/announcements', '/'],
-  });
-}
-
-export async function deleteContentPage(formData: FormData) {
-  await deleteEntity('contentPage', formData, {
-    roles: ['content_editor'],
-    revalidate: ['/admin/content'],
-  });
-}

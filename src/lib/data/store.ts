@@ -507,6 +507,7 @@ class MockStore {
     seatIds: string[];
     seatCategory: SeatCategory;
     passenger: PassengerDetails;
+    boardingPoint?: string;
     holdId: string;
     sessionId: string;
     promoCode?: string;
@@ -560,7 +561,7 @@ class MockStore {
       customerId: params.customerId,
       origin: view.route.origin,
       destination: view.route.destination,
-      boardingPoint: `${view.route.origin} Terminal`,
+      boardingPoint: params.boardingPoint || `${view.route.origin} Terminal`,
       travelDate: view.schedule.date,
       departureTime: view.schedule.departureTime,
       arrivalTime: view.schedule.arrivalTime,

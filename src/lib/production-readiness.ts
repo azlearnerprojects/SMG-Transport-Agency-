@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { APP_URL, DEMO_MODE, PAYMENT_PROVIDER, getPaystackConfig } from './config';
+import { IMPLEMENTED_SMS_PROVIDERS } from './sms';
 import type {
   ProductionReadinessCheck,
   ProductionReadinessStatus,
@@ -15,7 +16,6 @@ interface ReadinessInput {
 
 const DEFAULT_FIREBASE_PROJECT_ID = 'smg-transport-agency';
 const STRONG_SECRET_MIN_LENGTH = 32;
-const IMPLEMENTED_SMS_PROVIDERS = new Set<string>();
 
 function env(name: string): string {
   return process.env[name]?.trim() ?? '';
@@ -147,7 +147,9 @@ function checkFirebaseAdmin(checks: ProductionReadinessCheck[], projectId: strin
   const hasInlineKey = Boolean(env('FIREBASE_PRIVATE_KEY'));
   const hasInline = hasInlineProject && hasInlineEmail && hasInlineKey;
   const hasPartialInline = hasInlineProject || hasInlineEmail || hasInlineKey;
-  const runtimeCredentialSignal = Boolean(env('FIREBASE_CONFIG') || env('K_SERVICE') || env('FUNCTION_TARGET'));
+  const runtimeCredentialSignal = Boolean(
+    env('FIREBASE_CONFIG') || env('K_SERVICE') || env('FUNCTION_TARGET') || env('GCLOUD_PROJECT') || env('GCP_PROJECT'),
+  );
 
   if (hasInline) {
     if (env('FIREBASE_PROJECT_ID') !== projectId) {

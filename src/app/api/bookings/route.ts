@@ -43,6 +43,7 @@ export const POST = withErrorHandling(async (req: Request) => {
       emergencyContactPhone: body.passenger.emergencyContactPhone || undefined,
       specialAssistance: body.passenger.specialAssistance || undefined,
     },
+    boardingPoint: body.boardingPoint,
     holdId: body.holdId,
     sessionId: body.sessionId,
     promoCode: body.promoCode || undefined,

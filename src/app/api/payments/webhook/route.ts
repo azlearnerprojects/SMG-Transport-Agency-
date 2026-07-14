@@ -2,6 +2,7 @@ import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { getPaymentProvider } from '@/lib/payments';
 import { sendTicketEmail } from '@/lib/email';
+import { sendTicketSms } from '@/lib/sms';
 import { logger } from '@/lib/logger';
 
 /**
@@ -37,6 +38,7 @@ export const POST = withErrorHandling(async (req: Request) => {
     });
     if (confirm.ok && confirm.booking) {
       void sendTicketEmail(confirm.booking).catch(() => undefined);
+      void sendTicketSms(confirm.booking).catch(() => undefined);
       logger.info('Webhook confirmed booking', { booking: confirm.booking.reference });
     }
   }

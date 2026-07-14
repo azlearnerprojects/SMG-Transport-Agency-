@@ -9,6 +9,8 @@ const buttonVariants = cva(
       variant: {
         // Primary CTA per brand: gold background, navy text.
         primary: 'bg-gold text-navy hover:bg-gold-600 active:bg-gold-700 shadow-sm',
+        // Warm-orange action CTA used on public marketing surfaces.
+        cta: 'bg-orange text-white hover:bg-orange-600 active:bg-orange-700 shadow-sm',
         navy: 'bg-navy text-white hover:bg-navy-700 active:bg-navy-800',
         outline: 'border border-navy/30 text-navy bg-white hover:bg-navy/5',
         ghost: 'text-navy hover:bg-navy/5',

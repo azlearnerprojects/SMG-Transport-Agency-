@@ -122,6 +122,25 @@ describe('production readiness checks', () => {
     expect(summary.checks.find((check) => check.id === 'firebase-client')?.status).toBe('fail');
   });
 
+  it('accepts managed Firebase runtime credentials without local inline secrets', async () => {
+    const { summarizeProductionReadiness } = await loadReadiness(
+      productionEnv({
+        FIREBASE_PROJECT_ID: '',
+        FIREBASE_CLIENT_EMAIL: '',
+        FIREBASE_PRIVATE_KEY: '',
+        GCLOUD_PROJECT: 'smg-transport-agency',
+      }),
+    );
+
+    const summary = summarizeProductionReadiness({
+      siteConfig: launchSiteConfig(),
+      siteConfigConfigured: true,
+    });
+
+    expect(summary.ready).toBe(true);
+    expect(summary.checks.find((check) => check.id === 'firebase-admin')?.status).toBe('pass');
+  });
+
   it('blocks admin payment config that is still in test mode', async () => {
     const { summarizeProductionReadiness } = await loadReadiness(productionEnv());
 
@@ -136,5 +155,23 @@ describe('production readiness checks', () => {
     expect(summary.ready).toBe(false);
     expect(summary.checks.find((check) => check.id === 'admin-launch-switches')?.status).toBe('fail');
     expect(summary.checks.find((check) => check.id === 'admin-paystack-public-key')?.status).toBe('fail');
+  });
+
+  it('accepts Arkesel SMS credentials when the admin SMS flag is enabled', async () => {
+    const { summarizeProductionReadiness } = await loadReadiness(
+      productionEnv({
+        SMS_PROVIDER: 'arkesel',
+        SMS_API_KEY: 'test-sms-api-key',
+        SMS_SENDER_ID: 'SMGTravel',
+      }),
+    );
+
+    const summary = summarizeProductionReadiness({
+      siteConfig: launchSiteConfig({ smsProviderEnabled: true }),
+      siteConfigConfigured: true,
+    });
+
+    expect(summary.ready).toBe(true);
+    expect(summary.checks.find((check) => check.id === 'sms-provider')?.status).toBe('pass');
   });
 });

@@ -10,9 +10,20 @@ import { DEMO_MODE } from '@/lib/config';
 import type { AccountStatus, AuthRole, StaffRole } from '@/lib/types';
 import { z } from 'zod';
 
+const DEFAULT_BOOTSTRAP_ADMIN_EMAILS = [
+  'francis@pwavwe.com',
+  'pwavwef@gmail.com',
+  'support@smgagencygh.com',
+];
+
 const BOOTSTRAP_ADMIN_EMAILS = new Set(
-  (process.env.ADMIN_BOOTSTRAP_EMAILS ?? 'francis@pwavwe.com,pwavwef@gmail.com')
-    .split(',')
+  [
+    ...DEFAULT_BOOTSTRAP_ADMIN_EMAILS,
+    ...(process.env.ADMIN_BOOTSTRAP_EMAILS ?? '')
+      .split(',')
+      .map((email) => email.trim())
+      .filter(Boolean),
+  ]
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean),
 );

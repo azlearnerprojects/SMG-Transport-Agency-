@@ -689,6 +689,7 @@ class FirestoreStore implements Database {
     seatIds: string[];
     seatCategory: SeatCategory;
     passenger: PassengerDetails;
+    boardingPoint?: string;
     holdId: string;
     sessionId: string;
     promoCode?: string;
@@ -755,7 +756,7 @@ class FirestoreStore implements Database {
         customerId: params.customerId,
         origin: route.origin,
         destination: route.destination,
-        boardingPoint: `${route.origin} Terminal`,
+        boardingPoint: params.boardingPoint || `${route.origin} Terminal`,
         travelDate: schedule.date,
         departureTime: schedule.departureTime,
         arrivalTime: schedule.arrivalTime,

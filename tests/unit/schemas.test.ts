@@ -40,6 +40,7 @@ describe('createBookingSchema', () => {
       seatIds: ['6A'],
       seatCategory: 'standard' as const,
       passenger: { fullName: 'Jane Doe', phone: '0241234567', email: 'jane@example.com', idType: 'none' as const },
+      boardingPoint: 'Oldsite Terminal',
       sessionId: 'sess',
     };
     expect(createBookingSchema.safeParse({ ...base, consent: false }).success).toBe(false);

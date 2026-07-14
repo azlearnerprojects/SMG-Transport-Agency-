@@ -269,6 +269,68 @@ describe('POST /api/admin/login', () => {
     expect(res.headers.get('set-cookie')).toContain('__session=');
   });
 
+  it('promotes the support inbox bootstrap account to super admin', async () => {
+    const verifyIdToken = vi.fn().mockResolvedValue({
+      uid: 'uid-support-bootstrap',
+      email: 'support@smgagencygh.com',
+      name: 'SMG Support',
+      picture: '',
+    });
+    const firstSnapshot = {
+      exists: true,
+      data: () => ({
+        displayName: 'SMG Support',
+        email: 'support@smgagencygh.com',
+        role: 'customer',
+        status: 'active',
+      }),
+      get: vi.fn((key: string) => (key === 'displayName' ? 'SMG Support' : '')),
+    };
+    const freshSnapshot = {
+      exists: true,
+      data: () => ({
+        displayName: 'SMG Support',
+        email: 'support@smgagencygh.com',
+        role: 'super_admin',
+        status: 'active',
+      }),
+      get: vi.fn(),
+    };
+    const userRef = {
+      get: vi.fn().mockResolvedValueOnce(firstSnapshot).mockResolvedValueOnce(freshSnapshot),
+      set: vi.fn(),
+    };
+    const auditLogs = { add: vi.fn() };
+    const firestore = {
+      collection: vi.fn((name: string) => (name === 'users' ? { doc: vi.fn(() => userRef) } : auditLogs)),
+    };
+
+    vi.mocked(getAdminAuth).mockResolvedValue({ verifyIdToken } as never);
+    vi.mocked(getAdminFirestore).mockResolvedValue(firestore as never);
+
+    const res = await loginPOST(
+      new Request('http://localhost/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-forwarded-for': 'admin-login-route-support-bootstrap-test',
+        },
+        body: JSON.stringify({ idToken: 'support-bootstrap-token' }),
+      }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({
+      ok: true,
+      data: { email: 'support@smgagencygh.com', role: 'super_admin', name: 'SMG Support' },
+    });
+    expect(userRef.set).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'super_admin', status: 'active' }),
+      { merge: true },
+    );
+  });
+
   it('clears the Firebase Hosting session cookie on logout', async () => {
     const res = await logoutPOST();
     const body = await res.json();

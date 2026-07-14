@@ -4,7 +4,7 @@ import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { getPaymentProvider } from '@/lib/payments';
 import { sendTicketEmail } from '@/lib/email';
-import { sendSms } from '@/lib/sms';
+import { sendTicketSms } from '@/lib/sms';
 import { APP_URL } from '@/lib/config';
 import { logger } from '@/lib/logger';
 
@@ -39,10 +39,7 @@ async function verifyAndConfirm(providerReference: string, bookingReference?: st
 
   // Fire-and-forget notifications; failures must not block confirmation.
   void sendTicketEmail(confirm.booking).catch(() => undefined);
-  void sendSms({
-    to: confirm.booking.passenger.phone,
-    body: `SMG: Booking ${confirm.booking.reference} confirmed. Seat ${confirm.booking.seatIds.join(', ')} on ${confirm.booking.travelDate} ${confirm.booking.departureTime}.`,
-  }).catch(() => undefined);
+  void sendTicketSms(confirm.booking).catch(() => undefined);
 
   logger.info('Payment verified & booking confirmed', { booking: confirm.booking.reference });
   return { ok: true as const, booking: confirm.booking };

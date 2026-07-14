@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { sendCancellationSms } from '@/lib/sms';
 
 /** POST /api/bookings/[reference]/cancel — request cancellation (policy-checked, refund quoted). */
 export const POST = withErrorHandling(
@@ -12,6 +13,9 @@ export const POST = withErrorHandling(
     const db = getDb();
     const result = await db.cancelBooking(reference, 'customer');
     if (!result.ok) return jsonError(result.error ?? 'Could not cancel booking.', 409);
+    if (result.booking) {
+      void sendCancellationSms(result.booking, result.refund).catch(() => undefined);
+    }
     return jsonOk({ booking: result.booking, refund: result.refund });
   },
 );

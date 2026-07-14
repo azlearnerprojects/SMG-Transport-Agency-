@@ -1,11 +1,12 @@
 /**
- * Promote the first SMG super admin.
+ * Promote SMG super admin accounts.
  *
  * Run:
  *   npm run admin:set-super-admin
  *
  * Requirements:
- *   - Francis must have signed in with Google at least once.
+ *   - Each listed account should sign in with Google at least once, or this
+ *     script will pre-provision the Firebase Auth user by email.
  *   - Use FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY, or
  *     Google Application Default Credentials via gcloud, or a service-account
  *     JSON pointed to by GOOGLE_APPLICATION_CREDENTIALS.
@@ -16,7 +17,10 @@ import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const SUPER_ADMIN_EMAIL = 'francis@pwavwe.com';
+const SUPER_ADMINS = [
+  { email: 'francis@pwavwe.com', displayName: 'Francis Pwavwe' },
+  { email: 'support@smgagencygh.com', displayName: 'SMG Support' },
+] as const;
 
 function loadEnvFile(fileName: string) {
   const path = resolve(process.cwd(), fileName);
@@ -64,54 +68,55 @@ async function main() {
 
   const auth = getAuth();
   const firestore = getFirestore();
-  const email = SUPER_ADMIN_EMAIL;
 
-  console.log(`Promoting ${email} to SMG Super Admin.`);
+  console.log(`Promoting ${SUPER_ADMINS.length} account(s) to SMG Super Admin.`);
   console.log(`Firebase project: ${projectId ?? 'Application Default Credentials default project'}`);
 
-  let user;
-  try {
-    user = await auth.getUserByEmail(email);
-  } catch (err) {
-    const code = typeof err === 'object' && err && 'code' in err ? String(err.code) : '';
-    if (code === 'auth/user-not-found') {
-      // Pre-provision the account. When Francis signs in with Google using the
-      // same email, Firebase links the Google provider to this account and the
-      // custom claims below apply immediately.
-      console.log(`No Auth user for ${email} yet — creating the account now.`);
-      user = await auth.createUser({ email, displayName: 'Francis Pwavwe', emailVerified: true });
-    } else {
-      throw err;
+  for (const { email, displayName } of SUPER_ADMINS) {
+    let user;
+    try {
+      user = await auth.getUserByEmail(email);
+    } catch (err) {
+      const code = typeof err === 'object' && err && 'code' in err ? String(err.code) : '';
+      if (code === 'auth/user-not-found') {
+        // Pre-provision the account. When the same email signs in with Google,
+        // Firebase links the Google provider and these custom claims apply.
+        console.log(`No Auth user for ${email} yet - creating the account now.`);
+        user = await auth.createUser({ email, displayName, emailVerified: true });
+      } else {
+        throw err;
+      }
     }
+
+    await auth.setCustomUserClaims(user.uid, {
+      ...(user.customClaims ?? {}),
+      role: 'super_admin',
+      superAdmin: true,
+      admin: true,
+    });
+
+    const now = new Date().toISOString();
+    const ref = firestore.collection('users').doc(user.uid);
+    const existing = await ref.get();
+    await ref.set(
+      {
+        uid: user.uid,
+        displayName: user.displayName ?? existing.get('displayName') ?? displayName,
+        email,
+        photoURL: user.photoURL ?? existing.get('photoURL') ?? '',
+        role: 'super_admin',
+        status: 'active',
+        createdAt: existing.get('createdAt') ?? now,
+        updatedAt: now,
+        lastLoginAt: existing.get('lastLoginAt') ?? now,
+      },
+      { merge: true },
+    );
+
+    console.log(`Success: ${email} is now SUPER ADMIN.`);
+    console.log(`Auth uid: ${user.uid}`);
   }
 
-  await auth.setCustomUserClaims(user.uid, {
-    ...(user.customClaims ?? {}),
-    role: 'super_admin',
-    superAdmin: true,
-    admin: true,
-  });
-
-  const now = new Date().toISOString();
-  const ref = firestore.collection('users').doc(user.uid);
-  const existing = await ref.get();
-  await ref.set(
-    {
-      uid: user.uid,
-      displayName: user.displayName ?? existing.get('displayName') ?? 'Francis',
-      email,
-      photoURL: user.photoURL ?? existing.get('photoURL') ?? '',
-      role: 'super_admin',
-      status: 'active',
-      createdAt: existing.get('createdAt') ?? now,
-      updatedAt: now,
-      lastLoginAt: existing.get('lastLoginAt') ?? now,
-    },
-    { merge: true },
-  );
-
-  console.log(`Success: ${email} is now SUPER ADMIN.`);
-  console.log(`Auth uid: ${user.uid}`);
   console.log('Custom claims set: role=super_admin, superAdmin=true, admin=true');
   console.log('Firestore profile updated in users/{uid}.');
 }

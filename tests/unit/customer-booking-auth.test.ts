@@ -16,6 +16,7 @@ const bookingBody = {
   seatIds: ['1A'],
   seatCategory: 'standard',
   passenger,
+  boardingPoint: 'Oldsite Terminal',
   sessionId: 'session-1',
   consent: true,
   holdId: 'hold-1',
