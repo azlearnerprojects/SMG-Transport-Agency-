@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { BusFront, Loader2, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +12,6 @@ import { getFirebaseAuth } from '@/lib/firebase/client';
 import { DEMO_MODE } from '@/lib/config';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +26,7 @@ export default function AdminLoginPage() {
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
@@ -36,8 +35,7 @@ export default function AdminLoginPage() {
         setError(json.error ?? 'Login failed.');
         return;
       }
-      router.push('/admin');
-      router.refresh();
+      window.location.assign('/admin');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -64,6 +62,7 @@ export default function AdminLoginPage() {
 
       const res = await fetch('/api/admin/login', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
       });
@@ -72,8 +71,7 @@ export default function AdminLoginPage() {
         setError(json.error ?? 'Access denied - this area is for authorized staff only.');
         return;
       }
-      router.push('/admin');
-      router.refresh();
+      window.location.assign('/admin');
     } catch {
       setError('Network error. Please try again.');
     } finally {

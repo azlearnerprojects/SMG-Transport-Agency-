@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, CheckCircle2, Edit3, Loader2, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { CalendarClock, CheckCircle2, Edit3, LayoutDashboard, Loader2, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert } from '@/components/ui/misc';
 import { useCustomerAuth } from '@/lib/auth/customer-auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 import { ROLE_LABELS, STATUS_LABELS } from '@/lib/auth/roles';
 import { formatDate, formatTime } from '@/lib/format';
 import type { AccountStatus, AuthRole } from '@/lib/types';
@@ -43,6 +44,7 @@ function ProfileContent() {
   const [name, setName] = useState(user?.fullName ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [saving, setSaving] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(false);
   const [message, setMessage] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
 
   useEffect(() => {
@@ -71,6 +73,37 @@ function ProfileContent() {
     router.push('/');
   }
 
+  async function openAdminDashboard() {
+    setAdminLoading(true);
+    setMessage(null);
+    try {
+      const auth = await getFirebaseAuth();
+      const idToken = await auth?.currentUser?.getIdToken(true);
+      if (!idToken) {
+        setMessage({ tone: 'danger', text: 'Please sign in with Google again before opening the admin dashboard.' });
+        return;
+      }
+
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setMessage({ tone: 'danger', text: json.error ?? 'Could not open the admin dashboard.' });
+        return;
+      }
+      window.location.assign('/admin');
+    } catch {
+      setMessage({ tone: 'danger', text: 'Network error. Please try again.' });
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  const isSuperAdmin = user.role === 'super_admin';
   const stats = [
     { label: 'Role', value: <Badge variant={roleVariant(user.role)}>{ROLE_LABELS[user.role]}</Badge>, icon: ShieldCheck },
     { label: 'Status', value: <Badge variant={statusVariant(user.status)}>{STATUS_LABELS[user.status]}</Badge>, icon: CheckCircle2 },
@@ -88,9 +121,22 @@ function ProfileContent() {
             <h1 className="font-heading text-3xl font-extrabold text-white">Your SMG profile</h1>
             <p className="mt-1 text-sm text-white/75">Profile, access, and sign-in details in one clean place.</p>
           </div>
-          <Button variant="primary" onClick={signOut}>
-            <LogOut className="size-4" /> Sign out
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                className="border-white/70 bg-white/90 text-navy hover:bg-white"
+                disabled={adminLoading}
+                onClick={openAdminDashboard}
+              >
+                {adminLoading ? <Loader2 className="size-4 animate-spin" /> : <LayoutDashboard className="size-4" />}
+                Admin dashboard
+              </Button>
+            )}
+            <Button variant="primary" onClick={signOut}>
+              <LogOut className="size-4" /> Sign out
+            </Button>
+          </div>
         </div>
 
         {message && (

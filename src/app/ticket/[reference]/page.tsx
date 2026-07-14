@@ -11,8 +11,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert } from '@/components/ui/misc';
 import { TicketActions } from '@/components/booking/ticket-actions';
 import { Logo } from '@/components/layout/logo';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Your e-ticket', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Your E-ticket');
 
 export default async function TicketPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;

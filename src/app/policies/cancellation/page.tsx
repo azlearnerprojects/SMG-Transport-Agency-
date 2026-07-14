@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
 import { DEFAULT_POLICY } from '@/lib/config';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Cancellation & Refund Policy',
-  description: 'How SMG cancellations, refunds and rescheduling work.',
-};
+export const metadata = buildRouteMetadata('/policies/cancellation');
 
 export default function CancellationPolicyPage() {
   const p = DEFAULT_POLICY;

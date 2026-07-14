@@ -6,11 +6,9 @@ import { BookingDetails } from '@/components/booking/booking-details';
 import { PaymentPanel } from '@/components/booking/payment-panel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Review & pay',
-  robots: { index: false },
-};
+export const metadata: Metadata = buildNoIndexMetadata('Review & Pay');
 
 export default async function ReviewPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;
@@ -48,7 +46,17 @@ export default async function ReviewPage({ params }: { params: Promise<{ referen
               <CardTitle>Payment</CardTitle>
             </CardHeader>
             <CardContent>
-              <PaymentPanel reference={booking.reference} total={booking.total} />
+              <PaymentPanel
+                reference={booking.reference}
+                total={booking.total}
+                currency={booking.currency}
+                origin={booking.origin}
+                destination={booking.destination}
+                seatCategory={booking.seatCategory}
+                seatCount={booking.seatIds.length}
+                travelDate={booking.travelDate}
+                promoCode={booking.promoCode}
+              />
             </CardContent>
           </Card>
         </aside>

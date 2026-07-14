@@ -5,8 +5,9 @@ import { verifyReferenceToken } from '@/lib/verify-token';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatTime } from '@/lib/format';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Verify ticket', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Verify Ticket');
 
 export default async function VerifyPage({
   searchParams,

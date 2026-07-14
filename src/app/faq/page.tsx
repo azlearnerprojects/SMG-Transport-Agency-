@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
 import { getDb } from '@/lib/db';
 import { PageHeader } from '@/components/layout/page-header';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'FAQs',
-  description: 'Answers to common questions about booking, payments, tickets and travel with SMG.',
-};
+export const metadata = buildRouteMetadata('/faq');
 
 export default async function FaqPage() {
   const db = getDb();

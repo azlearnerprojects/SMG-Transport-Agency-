@@ -11,6 +11,7 @@ import type {
   Bus,
   BoardingPoint,
   ContentPage,
+  FareCategoryConfig,
   FaqItem,
   Promotion,
   Route,
@@ -23,6 +24,7 @@ import type {
   SystemSettings,
 } from '../types';
 import { DEFAULT_POLICY, SEAT_HOLD_TTL_SECONDS } from '../config';
+import { DEFAULT_FARE_CATEGORIES } from '../fare-categories';
 
 function iso(d: Date): string {
   return d.toISOString();
@@ -92,6 +94,7 @@ function buildLayout(opts: {
 
 export interface SeedData {
   seatLayouts: SeatLayout[];
+  fareCategories: FareCategoryConfig[];
   buses: Bus[];
   boardingPoints: BoardingPoint[];
   routes: Route[];
@@ -213,6 +216,7 @@ export function buildSeed(now: Date): SeedData {
     durationMinutes: r.min,
     description: `${r.origin} to ${r.destination} — comfortable intercity service. (Sample route, pending CEO approval.)`,
     popular: r.popular,
+    status: 'draft',
     createdAt: ts,
     updatedAt: ts,
   }));
@@ -476,6 +480,7 @@ export function buildSeed(now: Date): SeedData {
 
   return {
     seatLayouts,
+    fareCategories: DEFAULT_FARE_CATEGORIES.map((category) => ({ ...category, createdAt: ts, updatedAt: ts })),
     buses,
     boardingPoints,
     routes,

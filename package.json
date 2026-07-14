@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "SMG Transport Agency — digital intercity bus booking platform for Ghana (MVP)",
+  "engines": {
+    "node": "22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "production:check": "tsx scripts/check-production-env.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:firestore": "tsx scripts/seed-firestore.ts",
     "functions:build": "npm --prefix functions run build",

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, Maximize2, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Maximize2, MessageCircle, X } from 'lucide-react';
 import { ChatSurface } from '@/components/chatbot/chat-surface';
 
 export function ChatbotWidget() {
@@ -14,24 +13,43 @@ export function ChatbotWidget() {
   if (pathname?.startsWith('/admin')) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    // Single launcher, pinned bottom-right, above all page content and honouring
+    // device safe-area insets so it never sits under a home indicator or notch.
+    <div
+      className="fixed z-50 flex flex-col items-end gap-3"
+      style={{
+        right: 'max(1rem, env(safe-area-inset-right))',
+        bottom: 'max(1rem, env(safe-area-inset-bottom))',
+      }}
+    >
       {open && (
         <div
           id="smg-chatbot-widget"
-          className="flex h-[min(620px,calc(100vh-6rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-white/70 bg-white shadow-card-hover sm:w-[390px]"
+          role="dialog"
+          aria-label="SMG support chat"
+          className="flex h-[min(70vh,32rem)] w-[min(calc(100vw-2rem),24rem)] flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-card-hover"
         >
-          <div className="flex shrink-0 items-center justify-end gap-1 border-b border-border bg-white px-3 py-2">
-            <Link href="/support/chat" className="grid size-9 place-items-center rounded-md text-navy hover:bg-navy/5" aria-label="Open full chat page">
-              <Maximize2 className="size-4" />
-            </Link>
-            <button
-              type="button"
-              className="grid size-9 place-items-center rounded-md text-navy hover:bg-navy/5"
-              onClick={() => setOpen(false)}
-              aria-label="Close chat"
-            >
-              <X className="size-4" />
-            </button>
+          <div className="flex shrink-0 items-center justify-between gap-1 border-b border-border bg-navy px-3 py-2 text-white">
+            <span className="flex items-center gap-2 pl-1 text-sm font-semibold">
+              <MessageCircle className="size-4" aria-hidden /> SMG Assistant
+            </span>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/support/chat"
+                className="grid size-8 place-items-center rounded-md text-white/90 hover:bg-white/10"
+                aria-label="Open full chat page"
+              >
+                <Maximize2 className="size-4" />
+              </Link>
+              <button
+                type="button"
+                className="grid size-8 place-items-center rounded-md text-white/90 hover:bg-white/10"
+                onClick={() => setOpen(false)}
+                aria-label="Close chat"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </div>
           {/* min-h-0 lets the chat surface shrink inside the flex column so its
               input bar stays visible instead of being clipped by overflow-hidden. */}
@@ -40,17 +58,17 @@ export function ChatbotWidget() {
           </div>
         </div>
       )}
-      <Button
+
+      <button
         type="button"
-        size="lg"
-        className="h-14 rounded-full px-5 shadow-card-hover"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="smg-chatbot-widget"
+        aria-label={open ? 'Close chat' : 'Open SMG support chat'}
+        className="grid size-14 place-items-center rounded-full bg-navy text-white shadow-card-hover transition-transform hover:-translate-y-0.5 hover:bg-navy-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2"
       >
-        {open ? <X className="size-5" /> : <Bot className="size-5" />}
-        {open ? 'Close' : 'Chat'}
-      </Button>
+        {open ? <X className="size-6" /> : <MessageCircle className="size-6" />}
+      </button>
     </div>
   );
 }

@@ -13,14 +13,12 @@ import {
   RefreshCw,
   Route as RouteIcon,
   ShieldCheck,
-  MessageCircle,
   TriangleAlert,
   Ticket,
   Users,
 } from 'lucide-react';
 import { getStaffSession } from '@/lib/auth/session';
 import { getDb } from '@/lib/db';
-import { countChatSessions } from '@/lib/chatbot/admin';
 import { formatCurrency, formatDate, formatTime } from '@/lib/format';
 import { BookingStatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -47,14 +45,13 @@ function countByStatus(bookings: Booking[]) {
 export default async function AdminOverview() {
   const session = await getStaffSession();
   const db = getDb();
-  const [overview, bookings, routes, buses, schedules, payments, chatSessions] = await Promise.all([
+  const [overview, bookings, routes, buses, schedules, payments] = await Promise.all([
     db.overview(),
     db.listBookings(),
     db.listRoutes(),
     db.listBuses(),
     db.listSchedules(),
     db.listPayments(),
-    countChatSessions(),
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -80,7 +77,6 @@ export default async function AdminOverview() {
     { label: 'Pending cancellations', value: pendingCancellations, icon: TriangleAlert, hint: `${pendingChanges} total passenger changes` },
     { label: 'Pending reschedules', value: pendingReschedules, icon: RefreshCw, hint: 'Trips waiting for staff action' },
     { label: 'Failed payments', value: failedPayments, icon: CreditCard, hint: 'Needs finance review' },
-    { label: 'Chatbot conversations', value: chatSessions.count, icon: MessageCircle, hint: chatSessions.configured ? 'Stored support sessions' : 'Firebase not configured' },
     { label: 'System health', value: 'Online', icon: ShieldCheck, hint: 'Core dashboard reachable' },
   ];
 

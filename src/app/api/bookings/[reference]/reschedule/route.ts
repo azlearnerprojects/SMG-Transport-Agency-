@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/db';
 import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
+import { sendRescheduleSms } from '@/lib/sms';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -15,6 +16,9 @@ export const POST = withErrorHandling(
     const db = getDb();
     const result = await db.rescheduleBooking(reference, body.newScheduleId, body.seatIds, 'customer');
     if (!result.ok) return jsonError(result.error ?? 'Could not reschedule.', 409);
+    if (result.booking) {
+      void sendRescheduleSms(result.booking).catch(() => undefined);
+    }
     return jsonOk({ booking: result.booking });
   },
 );

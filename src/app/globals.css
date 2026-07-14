@@ -73,6 +73,40 @@
       radial-gradient(1000px 420px at 84% -10%, rgba(247, 178, 103, 0.22), transparent 62%),
       linear-gradient(160deg, #4F9BE8 0%, #003366 58%, #001833 100%);
   }
+
+  /* CSS fallback shown behind the hero coach photo while it loads or if it is
+     unavailable, so the hero never collapses to a blank rectangle. */
+  .hero-photo-fallback {
+    background:
+      radial-gradient(120% 90% at 80% 10%, rgba(79, 155, 232, 0.55), transparent 60%),
+      linear-gradient(150deg, #0d4a8a 0%, #003366 55%, #001833 100%);
+  }
+
+  /* Hide the horizontal scrollbar on the mobile route carousel without losing
+     scrollability or keyboard access. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Small rise-and-fade used once when the hero search card first appears. */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-rise-in {
+    animation: rise-in 0.5s ease-out both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise-in {
+      animation: none;
+    }
+  }
 }
 
 /* Print styles for the electronic ticket. */

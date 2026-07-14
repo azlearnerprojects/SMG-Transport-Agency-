@@ -12,7 +12,7 @@
 - Functions runtime: Node.js 20.
 - Functions region defaults: `us-central1`.
 - App Firebase config: loaded from `NEXT_PUBLIC_FIREBASE_*` env vars; set `NEXT_PUBLIC_FIREBASE_PROJECT_ID=smg-transport-agency` for production.
-- Admin Firebase config: loaded from inline Admin SDK env vars or Google Application Default Credentials; set `FIREBASE_PROJECT_ID=smg-transport-agency` for local admin commands.
+- Admin Firebase config: loaded from inline Admin SDK env vars or Google Application Default Credentials; set the project with `gcloud config set project smg-transport-agency` or export `FIREBASE_PROJECT_ID=smg-transport-agency` only in ad hoc shells for local admin commands.
 
 ## Deployment Resilience
 

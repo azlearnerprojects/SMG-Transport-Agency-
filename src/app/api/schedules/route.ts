@@ -12,24 +12,26 @@ export const GET = withErrorHandling(async (req: Request) => {
   const candidates = schedules.filter(
     (s) => s.status === 'scheduled' && (!routeId || s.routeId === routeId) && (!date || s.date === date),
   );
-  const views = await Promise.all(candidates.map((s) => db.getScheduleView(s.id)));
+  const views = await Promise.all(candidates.map((schedule) => db.getScheduleView(schedule.id)));
   const list = candidates
-    .map((s, index) => {
+    .flatMap((_, index) => {
       const view = views[index];
-      return view
-        ? {
-            scheduleId: s.id,
-            date: s.date,
-            departureTime: s.departureTime,
-            arrivalTime: s.arrivalTime,
-            busNumber: view.bus.busNumber,
-            busCategory: view.bus.category,
-            availableSeats: view.availableSeats,
-            minFare: view.minFare,
-          }
-        : null;
+      if (!view) return [];
+      const { schedule, bus } = view;
+      return [
+        {
+          scheduleId: schedule.id,
+          date: schedule.date,
+          departureTime: schedule.departureTime,
+          arrivalTime: schedule.arrivalTime,
+          busNumber: bus.busNumber,
+          busCategory: bus.category,
+          availableSeats: view.availableSeats,
+          minFare: view.minFare,
+        },
+      ];
     })
-    .filter(Boolean);
+    .sort((a, b) => a.date.localeCompare(b.date) || a.departureTime.localeCompare(b.departureTime));
 
   return jsonOk({ schedules: list });
 });

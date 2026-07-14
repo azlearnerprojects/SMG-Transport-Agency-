@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { APP_URL } from '@/lib/config';
+import { CANONICAL_SITE_URL } from '@/lib/seo';
 
 export const dynamic = 'force-static';
 
@@ -10,9 +10,30 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         // Private/transactional areas should not be indexed.
-        disallow: ['/admin', '/dashboard', '/api', '/ticket', '/booking', '/payment'],
+        disallow: [
+          '/admin',
+          '/admin/',
+          '/profile',
+          '/dashboard',
+          '/dashboard/',
+          '/api/',
+          '/ticket',
+          '/ticket/',
+          '/booking',
+          '/booking/',
+          '/book/',
+          '/book/review',
+          '/book/review/',
+          '/payment',
+          '/payment/',
+          '/manage',
+          '/verify',
+          '/login',
+          '/register',
+          '/access-denied',
+        ],
       },
     ],
-    sitemap: `${APP_URL}/sitemap.xml`,
+    sitemap: `${CANONICAL_SITE_URL}/sitemap.xml`,
   };
 }

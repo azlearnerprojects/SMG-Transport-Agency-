@@ -4,8 +4,10 @@ import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { getDb } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { PaymentSuccessAnalytics } from '@/components/analytics/payment-success-analytics';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Payment status', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Payment Status');
 
 export default async function PaymentStatusPage({
   searchParams,
@@ -23,6 +25,17 @@ export default async function PaymentStatusPage({
         <CardContent className="p-8">
           {success ? (
             <>
+              <PaymentSuccessAnalytics
+                reference={booking!.reference}
+                origin={booking!.origin}
+                destination={booking!.destination}
+                seatCategory={booking!.seatCategory}
+                seatCount={booking!.seatIds.length}
+                total={booking!.total}
+                currency={booking!.currency}
+                travelDate={booking!.travelDate}
+                promoCode={booking!.promoCode}
+              />
               <div className="mx-auto grid size-16 place-items-center rounded-full bg-green-100 text-green-700">
                 <CheckCircle2 className="size-9" />
               </div>

@@ -60,7 +60,24 @@ const config: Config = {
           800: '#183f70',
           900: '#17365e',
         },
+        // Warm action orange — reserved for primary calls to action on the
+        // public marketing surfaces (hero, header CTA, route cards).
+        orange: {
+          DEFAULT: '#FF8A1F',
+          50: '#fff4e8',
+          100: '#ffe6cc',
+          200: '#ffcd99',
+          300: '#ffb266',
+          400: '#ff9d3d',
+          500: '#FF8A1F',
+          600: '#E8730C',
+          700: '#c25e08',
+          800: '#9a4b0d',
+          900: '#7c3d0f',
+        },
         cloud: '#F5F7FA',
+        // Very light blue-grey page canvas used on the marketing homepage.
+        pagebg: '#F7FAFE',
         // Semantic tokens mapped to CSS variables (see globals.css)
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

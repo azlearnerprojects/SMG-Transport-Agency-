@@ -16,6 +16,7 @@ import type {
   BookingStatus,
   Bus,
   ContentPage,
+  FareCategoryConfig,
   FaqItem,
   PassengerDetails,
   Payment,
@@ -79,6 +80,18 @@ export interface CancellationQuote {
   refund: RefundQuote;
 }
 
+/** Reference/config records that admins may delete outright. */
+export type DeletableEntity =
+  | 'route'
+  | 'bus'
+  | 'seatLayout'
+  | 'fareCategory'
+  | 'schedule'
+  | 'promotion'
+  | 'faq'
+  | 'announcement'
+  | 'contentPage';
+
 /**
  * Async database contract shared by the demo (in-memory) adapter and the
  * production Firestore adapter. Every consumer goes through `getDb()` and
@@ -93,10 +106,12 @@ export interface Database {
   listRoutes(): Promise<Route[]>;
   listBuses(): Promise<Bus[]>;
   listLayouts(): Promise<SeatLayout[]>;
+  listFareCategories(): Promise<FareCategoryConfig[]>;
   listPromotions(): Promise<Promotion[]>;
   listFaqs(): Promise<FaqItem[]>;
   listAllFaqs(): Promise<FaqItem[]>;
   listAnnouncements(): Promise<Announcement[]>;
+  listAllAnnouncements(): Promise<Announcement[]>;
   listContentPages(): Promise<ContentPage[]>;
   getContentPage(slug: string): Promise<ContentPage | undefined>;
   listStaff(): Promise<StaffProfile[]>;
@@ -106,6 +121,17 @@ export interface Database {
   getBus(id: string): Promise<Bus | undefined>;
   getLayout(id: string): Promise<SeatLayout | undefined>;
   getPromotionByCode(code: string): Promise<Promotion | undefined>;
+
+  upsertRoute(id: string | undefined, input: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>): Promise<Route>;
+  upsertBus(id: string | undefined, input: Omit<Bus, 'id' | 'capacity' | 'createdAt' | 'updatedAt'>): Promise<Bus>;
+  upsertLayout(id: string | undefined, input: Omit<SeatLayout, 'id' | 'createdAt' | 'updatedAt'>): Promise<SeatLayout>;
+  upsertFareCategory(id: string | undefined, input: Omit<FareCategoryConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<FareCategoryConfig>;
+  upsertSchedule(id: string | undefined, input: Omit<Schedule, 'id' | 'bookedSeatIds' | 'createdAt' | 'updatedAt'>): Promise<Schedule>;
+  upsertPromotion(id: string | undefined, input: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>): Promise<Promotion>;
+  upsertFaq(id: string | undefined, input: Omit<FaqItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<FaqItem>;
+  upsertAnnouncement(id: string | undefined, input: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>): Promise<Announcement>;
+  upsertContentPage(id: string | undefined, input: Omit<ContentPage, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentPage>;
+  deleteEntity(kind: DeletableEntity, id: string): Promise<boolean>;
 
   /* Schedules + availability */
   searchSchedules(params: { origin: string; destination: string; date: string }): Promise<EnrichedSchedule[]>;
@@ -124,6 +150,7 @@ export interface Database {
     seatIds: string[];
     seatCategory: SeatCategory;
     passenger: PassengerDetails;
+    boardingPoint?: string;
     holdId: string;
     sessionId: string;
     promoCode?: string;
@@ -186,6 +213,9 @@ class DemoAdapter implements Database {
   async listLayouts() {
     return this.store.listLayouts();
   }
+  async listFareCategories() {
+    return this.store.listFareCategories();
+  }
   async listPromotions() {
     return this.store.listPromotions();
   }
@@ -197,6 +227,9 @@ class DemoAdapter implements Database {
   }
   async listAnnouncements() {
     return this.store.listAnnouncements();
+  }
+  async listAllAnnouncements() {
+    return this.store.listAllAnnouncements();
   }
   async listContentPages() {
     return this.store.listContentPages();
@@ -224,6 +257,36 @@ class DemoAdapter implements Database {
   }
   async getPromotionByCode(code: string) {
     return this.store.getPromotionByCode(code);
+  }
+  async upsertRoute(id: string | undefined, input: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertRoute(id, input);
+  }
+  async upsertBus(id: string | undefined, input: Omit<Bus, 'id' | 'capacity' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertBus(id, input);
+  }
+  async upsertLayout(id: string | undefined, input: Omit<SeatLayout, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertLayout(id, input);
+  }
+  async upsertFareCategory(id: string | undefined, input: Omit<FareCategoryConfig, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertFareCategory(id, input);
+  }
+  async upsertSchedule(id: string | undefined, input: Omit<Schedule, 'id' | 'bookedSeatIds' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertSchedule(id, input);
+  }
+  async upsertPromotion(id: string | undefined, input: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertPromotion(id, input);
+  }
+  async upsertFaq(id: string | undefined, input: Omit<FaqItem, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertFaq(id, input);
+  }
+  async upsertAnnouncement(id: string | undefined, input: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertAnnouncement(id, input);
+  }
+  async upsertContentPage(id: string | undefined, input: Omit<ContentPage, 'id' | 'createdAt' | 'updatedAt'>) {
+    return this.store.upsertContentPage(id, input);
+  }
+  async deleteEntity(kind: DeletableEntity, id: string) {
+    return this.store.deleteEntity(kind, id);
   }
   async searchSchedules(params: { origin: string; destination: string; date: string }) {
     return this.store.searchSchedules(params);

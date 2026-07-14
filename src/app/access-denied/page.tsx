@@ -1,12 +1,12 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Access Denied',
-  description: 'You do not have permission to access this SMG Transport Agency area.',
-};
+export const metadata = buildNoIndexMetadata(
+  'Access Denied',
+  'You do not have permission to access this SMG Transport Agency area.',
+);
 
 export default function AccessDeniedPage() {
   return (

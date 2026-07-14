@@ -61,17 +61,30 @@ npm run admin:set-super-admin
 firebase emulators:start
 ```
 
-## Remaining integration work (this MVP)
+## Production data path
 
-The `getDb()` abstraction (`src/lib/db/index.ts`) currently provides the in-memory store
-for Demo Mode and **throws** in non-demo mode. To go live you must:
+The `getDb()` abstraction (`src/lib/db/index.ts`) uses the in-memory store only
+when `NEXT_PUBLIC_DEMO_MODE=true`. In non-demo mode it uses the Firestore adapter
+in `src/lib/db/firestore-store.ts`, including transactional seat holds, booking
+creation, payment confirmation, reports, and admin reads.
 
-1. Implement a **Firestore adapter** exposing the same method surface as `MockStore`
-   (queries, atomic seat holds via `runTransaction`, booking/payment lifecycle, reports).
-2. Wire it into `getDb()` for the non-demo branch.
-3. Move seat-hold cleanup to a scheduled Cloud Function (the demo cleans up lazily).
-4. Persist email/SMS sending to production providers.
-5. Expand Firestore-backed admin modules beyond users/roles.
+Before go-live, run:
+
+```powershell
+npm run production:check
+```
+
+This verifies the local production blockers that can be checked without calling
+the Firebase Console: Firebase client/Admin config, project id alignment,
+canonical domain allow-list, live Paystack mode, strong signing secrets, and
+admin-facing launch switches when viewed from `/admin/config`.
+
+Remaining operational work:
+
+1. Move seat-hold cleanup to a scheduled Cloud Function (the demo cleans up lazily).
+2. Persist email/SMS sending to production providers as required by the launch plan.
+3. Confirm Firestore backups, App Check enforcement, IAM, and Auth provider settings
+   in Firebase Console.
 
 The client/admin initialisers (`src/lib/firebase/client.ts`, `admin.ts`) already
 lazy-load the SDKs and no-op safely when credentials are missing. See `ADMIN_SETUP.md`

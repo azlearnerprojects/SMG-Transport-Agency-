@@ -7,8 +7,9 @@ import { BookingStatusBadge, PaymentStatusBadge } from '@/components/shared/stat
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatTime } from '@/lib/format';
+import { buildNoIndexMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = { title: 'Booking details', robots: { index: false } };
+export const metadata: Metadata = buildNoIndexMetadata('Booking Details');
 
 export default async function BookingPage({ params }: { params: Promise<{ reference: string }> }) {
   const { reference } = await params;

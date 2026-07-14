@@ -3,17 +3,16 @@ import { notFound } from 'next/navigation';
 import { getDb } from '@/lib/db';
 import { ProgressSteps } from '@/components/booking/progress-steps';
 import { SeatBooking } from '@/components/booking/seat-booking';
+import { buildNoIndexMetadata } from '@/lib/seo';
+import { isPublicRoute } from '@/lib/public-data';
 
-export const metadata: Metadata = {
-  title: 'Select seat & passenger details',
-  robots: { index: false },
-};
+export const metadata: Metadata = buildNoIndexMetadata('Select Seat & Passenger Details');
 
 export default async function SeatPage({ params }: { params: Promise<{ scheduleId: string }> }) {
   const { scheduleId } = await params;
   const db = getDb();
   const view = await db.getScheduleView(scheduleId);
-  if (!view) notFound();
+  if (!view || !isPublicRoute(view.route) || view.schedule.status !== 'scheduled') notFound();
 
   const statuses = await db.seatStatuses(scheduleId);
 

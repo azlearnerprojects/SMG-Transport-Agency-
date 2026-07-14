@@ -6,6 +6,7 @@ import { Smartphone, CreditCard, Landmark, Loader2, ShieldCheck } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Alert } from '@/components/ui/misc';
 import { formatCurrency } from '@/lib/format';
+import { bookingAnalyticsItem, trackAddPaymentInfo } from '@/lib/analytics';
 import type { PaymentMethod } from '@/lib/types';
 
 const METHODS: { id: PaymentMethod; label: string; hint: string; icon: typeof Smartphone }[] = [
@@ -14,7 +15,29 @@ const METHODS: { id: PaymentMethod; label: string; hint: string; icon: typeof Sm
   { id: 'bank_transfer', label: 'Bank transfer', hint: 'For corporate / bulk bookings', icon: Landmark },
 ];
 
-export function PaymentPanel({ reference, total }: { reference: string; total: number }) {
+type PaymentPanelProps = {
+  reference: string;
+  total: number;
+  currency: string;
+  origin: string;
+  destination: string;
+  seatCategory: string;
+  seatCount: number;
+  travelDate: string;
+  promoCode?: string;
+};
+
+export function PaymentPanel({
+  reference,
+  total,
+  currency,
+  origin,
+  destination,
+  seatCategory,
+  seatCount,
+  travelDate,
+  promoCode,
+}: PaymentPanelProps) {
   const router = useRouter();
   const [method, setMethod] = useState<PaymentMethod>('mobile_money');
   const [loading, setLoading] = useState(false);
@@ -23,6 +46,23 @@ export function PaymentPanel({ reference, total }: { reference: string; total: n
   async function pay() {
     setError(null);
     setLoading(true);
+    trackAddPaymentInfo({
+      value: total,
+      currency,
+      paymentType: method,
+      coupon: promoCode,
+      items: [
+        bookingAnalyticsItem({
+          reference,
+          origin,
+          destination,
+          seatCategory,
+          seatCount,
+          total,
+          travelDate,
+        }),
+      ],
+    });
     try {
       const res = await fetch('/api/payments/init', {
         method: 'POST',

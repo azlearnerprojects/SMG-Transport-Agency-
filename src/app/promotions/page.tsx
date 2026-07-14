@@ -1,4 +1,3 @@
-import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Tag, Copy } from 'lucide-react';
 import { getDb } from '@/lib/db';
@@ -7,15 +6,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Promotions',
-  description: 'Current SMG travel offers and discount codes.',
-};
+export const metadata = buildRouteMetadata('/promotions');
 
 export default async function PromotionsPage() {
   const db = getDb();
-  const promos = (await db.listPromotions()).filter((p) => p.active);
+  const now = Date.now();
+  const promos = (await db.listPromotions()).filter(
+    (p) => p.active && new Date(p.startsAt).getTime() <= now && new Date(p.endsAt).getTime() >= now,
+  );
 
   return (
     <>

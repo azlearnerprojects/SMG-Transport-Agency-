@@ -2,6 +2,7 @@ import { jsonError, jsonOk, withErrorHandling } from '@/lib/api';
 import { getStaffSession, roleAllowed } from '@/lib/auth/session';
 import { getPublicSiteConfig, updatePublicSiteConfig } from '@/lib/site-config';
 import { publishRemoteConfigPatch, remoteConfigPatchFromSiteConfig } from '@/lib/remote-config';
+import { summarizeProductionReadiness } from '@/lib/production-readiness';
 
 /** GET /api/admin/config - read safe site config for authorized staff. */
 export const GET = withErrorHandling(async () => {
@@ -11,7 +12,13 @@ export const GET = withErrorHandling(async () => {
   }
 
   const result = await getPublicSiteConfig();
-  return jsonOk(result);
+  return jsonOk({
+    ...result,
+    readiness: summarizeProductionReadiness({
+      siteConfig: result.config,
+      siteConfigConfigured: result.configured,
+    }),
+  });
 });
 
 /** POST /api/admin/config - update safe public site config. */
@@ -47,5 +54,12 @@ export const POST = withErrorHandling(async (req: Request) => {
     );
   }
 
-  return jsonOk({ ...result, remoteConfig });
+  return jsonOk({
+    ...result,
+    remoteConfig,
+    readiness: summarizeProductionReadiness({
+      siteConfig: result.config,
+      siteConfigConfigured: result.configured,
+    }),
+  });
 });

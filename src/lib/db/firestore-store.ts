@@ -14,6 +14,8 @@ import { calculateFare } from '@/lib/fare';
 import { canCancel, canReschedule, computeRefund } from '@/lib/booking-rules';
 import { generateId, generateReference, generateTicketNumber } from '@/lib/ids';
 import { CURRENCY, DEFAULT_POLICY, SEAT_HOLD_TTL_SECONDS } from '@/lib/config';
+import { mergeFareCategoryDefaults } from '@/lib/fare-categories';
+import { isPublicRoute } from '@/lib/public-data';
 import type {
   Announcement,
   AppUser,
@@ -22,6 +24,7 @@ import type {
   BookingEvent,
   Bus,
   ContentPage,
+  FareCategoryConfig,
   FaqItem,
   PassengerDetails,
   Payment,
@@ -41,6 +44,7 @@ import type {
   AdminReports,
   CancellationQuote,
   Database,
+  DeletableEntity,
   EnrichedSchedule,
   HoldResult,
   SeatStatus,
@@ -51,13 +55,14 @@ const COLLECTIONS = {
   routes: 'routes',
   buses: 'buses',
   seatLayouts: 'seatLayouts',
+  fareCategories: 'fareCategories',
   boardingPoints: 'boardingPoints',
   promotions: 'promotions',
   faqs: 'faqs',
   announcements: 'announcements',
   contentPages: 'contentPages',
   staff: 'staffProfiles',
-  customers: 'customers',
+  users: 'users',
   schedules: 'schedules',
   holds: 'seatHolds',
   bookings: 'bookings',
@@ -105,6 +110,16 @@ function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
+}
+
+function toIso(value: unknown, fallback = new Date().toISOString()): string {
+  if (typeof value === 'string' && value) return value;
+  if (value instanceof Date) return value.toISOString();
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    const maybeDate = (value as { toDate?: () => Date }).toDate?.();
+    if (maybeDate instanceof Date) return maybeDate.toISOString();
+  }
+  return fallback;
 }
 
 interface RefCache {
@@ -187,6 +202,12 @@ class FirestoreStore implements Database {
     return (await this.loadRefData()).layouts;
   }
 
+  async listFareCategories(): Promise<FareCategoryConfig[]> {
+    const db = await this.db();
+    const snap = await db.collection(COLLECTIONS.fareCategories).limit(LIST_CAP).get();
+    return mergeFareCategoryDefaults(snap.docs.map((d) => d.data() as FareCategoryConfig));
+  }
+
   async listPromotions(): Promise<Promotion[]> {
     const db = await this.db();
     const snap = await db.collection(COLLECTIONS.promotions).limit(LIST_CAP).get();
@@ -205,9 +226,14 @@ class FirestoreStore implements Database {
   }
 
   async listAnnouncements(): Promise<Announcement[]> {
+    const all = await this.listAllAnnouncements();
+    return all.filter((a) => a.active);
+  }
+
+  async listAllAnnouncements(): Promise<Announcement[]> {
     const db = await this.db();
     const snap = await db.collection(COLLECTIONS.announcements).limit(LIST_CAP).get();
-    return snap.docs.map((d) => d.data() as Announcement).filter((a) => a.active);
+    return snap.docs.map((d) => d.data() as Announcement);
   }
 
   async listContentPages(): Promise<ContentPage[]> {
@@ -229,14 +255,38 @@ class FirestoreStore implements Database {
 
   async listCustomers(): Promise<AppUser[]> {
     const db = await this.db();
-    const snap = await db.collection(COLLECTIONS.customers).limit(LIST_CAP).get();
-    return snap.docs.map((d) => d.data() as AppUser);
+    const snap = await db.collection(COLLECTIONS.users).limit(LIST_CAP).get();
+    return snap.docs
+      .filter((doc) => {
+        const role = doc.get('role');
+        return !role || role === 'customer';
+      })
+      .map((doc) => {
+        const data = doc.data();
+        const now = new Date().toISOString();
+        const email = typeof data.email === 'string' ? data.email : '';
+        const displayName =
+          typeof data.displayName === 'string' && data.displayName
+            ? data.displayName
+            : email.split('@')[0] || 'SMG Customer';
+
+        return {
+          id: doc.id,
+          email,
+          fullName: displayName,
+          phone: typeof data.phone === 'string' ? data.phone : '',
+          emailVerified: Boolean(data.emailVerified),
+          savedPassengers: Array.isArray(data.savedPassengers) ? data.savedPassengers : [],
+          createdAt: toIso(data.createdAt, now),
+          updatedAt: toIso(data.updatedAt, now),
+        } satisfies AppUser;
+      });
   }
 
   async getCities(): Promise<string[]> {
     const routes = await this.listRoutes();
     const set = new Set<string>();
-    for (const r of routes) {
+    for (const r of routes.filter(isPublicRoute)) {
       set.add(r.origin);
       set.add(r.destination);
     }
@@ -258,6 +308,179 @@ class FirestoreStore implements Database {
   async getPromotionByCode(code: string): Promise<Promotion | undefined> {
     const promos = await this.listPromotions();
     return promos.find((p) => p.code.toLowerCase() === code.trim().toLowerCase());
+  }
+
+  async upsertRoute(id: string | undefined, input: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>): Promise<Route> {
+    const db = await this.db();
+    const recordId = id || generateId('route');
+    const ref = db.collection(COLLECTIONS.routes).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const route: Route = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(route), { merge: true });
+    this.refCache = null;
+    return route;
+  }
+
+  async upsertBus(id: string | undefined, input: Omit<Bus, 'id' | 'capacity' | 'createdAt' | 'updatedAt'>): Promise<Bus> {
+    const db = await this.db();
+    const recordId = id || generateId('bus');
+    const ref = db.collection(COLLECTIONS.buses).doc(recordId);
+    const [snap, layoutSnap] = await Promise.all([
+      ref.get(),
+      db.collection(COLLECTIONS.seatLayouts).doc(input.seatLayoutId).get(),
+    ]);
+    const now = new Date().toISOString();
+    const bus: Bus = {
+      ...input,
+      id: recordId,
+      capacity: layoutSnap.exists ? (layoutSnap.data() as SeatLayout).capacity : Number(snap.get('capacity') ?? 0),
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(bus), { merge: true });
+    this.refCache = null;
+    return bus;
+  }
+
+  async upsertLayout(id: string | undefined, input: Omit<SeatLayout, 'id' | 'createdAt' | 'updatedAt'>): Promise<SeatLayout> {
+    const db = await this.db();
+    const recordId = id || generateId('layout');
+    const ref = db.collection(COLLECTIONS.seatLayouts).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const layout: SeatLayout = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(layout), { merge: true });
+    this.refCache = null;
+    return layout;
+  }
+
+  async upsertFareCategory(id: string | undefined, input: Omit<FareCategoryConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<FareCategoryConfig> {
+    const db = await this.db();
+    const recordId = input.key;
+    const ref = db.collection(COLLECTIONS.fareCategories).doc(id || recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const category: FareCategoryConfig = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(category), { merge: true });
+    return category;
+  }
+
+  async upsertSchedule(id: string | undefined, input: Omit<Schedule, 'id' | 'bookedSeatIds' | 'createdAt' | 'updatedAt'>): Promise<Schedule> {
+    const db = await this.db();
+    const recordId = id || generateId('sch');
+    const ref = db.collection(COLLECTIONS.schedules).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const schedule: Schedule = {
+      ...input,
+      id: recordId,
+      bookedSeatIds: snap.exists && Array.isArray(snap.get('bookedSeatIds')) ? snap.get('bookedSeatIds') : [],
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(schedule), { merge: true });
+    return schedule;
+  }
+
+  async upsertPromotion(id: string | undefined, input: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>): Promise<Promotion> {
+    const db = await this.db();
+    const recordId = id || generateId('promo');
+    const ref = db.collection(COLLECTIONS.promotions).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const promotion: Promotion = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(promotion), { merge: true });
+    return promotion;
+  }
+
+  async upsertFaq(id: string | undefined, input: Omit<FaqItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<FaqItem> {
+    const db = await this.db();
+    const recordId = id || generateId('faq');
+    const ref = db.collection(COLLECTIONS.faqs).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const faq: FaqItem = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(faq), { merge: true });
+    return faq;
+  }
+
+  async upsertAnnouncement(id: string | undefined, input: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>): Promise<Announcement> {
+    const db = await this.db();
+    const recordId = id || generateId('ann');
+    const ref = db.collection(COLLECTIONS.announcements).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const announcement: Announcement = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(announcement), { merge: true });
+    return announcement;
+  }
+
+  async upsertContentPage(id: string | undefined, input: Omit<ContentPage, 'id' | 'createdAt' | 'updatedAt'>): Promise<ContentPage> {
+    const db = await this.db();
+    const recordId = id || generateId('page');
+    const ref = db.collection(COLLECTIONS.contentPages).doc(recordId);
+    const snap = await ref.get();
+    const now = new Date().toISOString();
+    const page: ContentPage = {
+      ...input,
+      id: recordId,
+      createdAt: snap.exists ? toIso(snap.get('createdAt'), now) : now,
+      updatedAt: now,
+    };
+    await ref.set(stripUndefined(page), { merge: true });
+    return page;
+  }
+
+  async deleteEntity(kind: DeletableEntity, id: string): Promise<boolean> {
+    const collections: Record<DeletableEntity, string> = {
+      route: COLLECTIONS.routes,
+      bus: COLLECTIONS.buses,
+      seatLayout: COLLECTIONS.seatLayouts,
+      fareCategory: COLLECTIONS.fareCategories,
+      schedule: COLLECTIONS.schedules,
+      promotion: COLLECTIONS.promotions,
+      faq: COLLECTIONS.faqs,
+      announcement: COLLECTIONS.announcements,
+      contentPage: COLLECTIONS.contentPages,
+    };
+    const db = await this.db();
+    const ref = db.collection(collections[kind]).doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) return false;
+    await ref.delete();
+    this.refCache = null;
+    return true;
   }
 
   /* ------------------------------------------------------------------ */
@@ -308,7 +531,9 @@ class FirestoreStore implements Database {
   async searchSchedules(params: { origin: string; destination: string; date: string }): Promise<EnrichedSchedule[]> {
     const ref = await this.loadRefData();
     const routeIds = new Set(
-      ref.routes.filter((r) => r.origin === params.origin && r.destination === params.destination).map((r) => r.id),
+      ref.routes
+        .filter((r) => isPublicRoute(r) && r.origin === params.origin && r.destination === params.destination)
+        .map((r) => r.id),
     );
     if (routeIds.size === 0) return [];
 
@@ -464,6 +689,7 @@ class FirestoreStore implements Database {
     seatIds: string[];
     seatCategory: SeatCategory;
     passenger: PassengerDetails;
+    boardingPoint?: string;
     holdId: string;
     sessionId: string;
     promoCode?: string;
@@ -530,7 +756,7 @@ class FirestoreStore implements Database {
         customerId: params.customerId,
         origin: route.origin,
         destination: route.destination,
-        boardingPoint: `${route.origin} Terminal`,
+        boardingPoint: params.boardingPoint || `${route.origin} Terminal`,
         travelDate: schedule.date,
         departureTime: schedule.departureTime,
         arrivalTime: schedule.arrivalTime,

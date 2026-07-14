@@ -21,7 +21,10 @@ import { buildSeed, type SeedData } from '../src/lib/data/seed';
 import { DEFAULT_PUBLIC_SITE_CONFIG, DEFAULT_CHATBOT_RUNTIME_CONFIG } from '../src/lib/site-config';
 import type { Schedule, StaffProfile } from '../src/lib/types';
 
-const SUPER_ADMIN_EMAIL = 'francis@pwavwe.com';
+const SUPER_ADMINS = [
+  { id: 'staff_francis', email: 'francis@pwavwe.com', fullName: 'Francis Pwavwe' },
+  { id: 'staff_support', email: 'support@smgagencygh.com', fullName: 'SMG Support' },
+] as const;
 const FORCE = process.argv.includes('--force');
 
 function loadEnvFile(fileName: string) {
@@ -141,17 +144,13 @@ async function main() {
   const scheduleById = new Map<string, Schedule>();
   for (const s of [...base.schedules, ...nextWeek.schedules]) scheduleById.set(s.id, s);
 
-  const staff: StaffProfile[] = [
-    {
-      id: 'staff_francis',
-      email: SUPER_ADMIN_EMAIL,
-      fullName: 'Francis Pwavwe',
-      role: 'super_admin',
-      active: true,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    },
-  ];
+  const staff: StaffProfile[] = SUPER_ADMINS.map((adminUser) => ({
+    ...adminUser,
+    role: 'super_admin',
+    active: true,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  }));
 
   const results: string[] = [];
   results.push(await seedCollection(db, 'seatLayouts', base.seatLayouts));

@@ -48,8 +48,8 @@ export function SettingsForm({ initial }: { initial: SystemSettings }) {
     <form onSubmit={save} className="max-w-2xl space-y-5">
       <Alert variant="warning">
         <span className="text-xs">
-          These values control cancellation, rescheduling and seat-hold behaviour. They are placeholders that
-          MUST be reviewed and approved by the CEO before launch.
+          These values control cancellation, rescheduling and seat-hold behaviour. Review them before launch
+          and update them any time the approved policy changes.
         </span>
       </Alert>
       <div className="grid gap-4 sm:grid-cols-2">

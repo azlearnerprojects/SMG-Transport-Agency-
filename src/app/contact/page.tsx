@@ -1,14 +1,11 @@
-import type { Metadata } from 'next';
 import { Phone, Mail, MapPin, MessageCircle, Clock } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { ContactForm } from '@/components/contact-form';
 import { getPublicSiteConfig } from '@/lib/site-config';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Contact',
-  description: 'Get in touch with the SMG Transport Agency customer support team.',
-};
+export const metadata = buildRouteMetadata('/contact');
 
 export default async function ContactPage() {
   const { config: site } = await getPublicSiteConfig();

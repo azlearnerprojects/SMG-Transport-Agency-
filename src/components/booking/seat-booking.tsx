@@ -14,6 +14,8 @@ import { Field, Checkbox, Alert } from '@/components/ui/misc';
 import { SeatMap } from './seat-map';
 import { FareSummary } from './fare-summary';
 import { passengerSchema, type PassengerInput } from '@/lib/schemas';
+import { useCustomerAuth } from '@/lib/auth/customer-auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 import { getSessionId } from '@/lib/session-id';
 import { formatCurrency, formatDate, formatTime } from '@/lib/format';
 import type { SeatCell, FareTable, SeatCategory, BusCategory } from '@/lib/types';
@@ -33,6 +35,7 @@ interface TripInfo {
 }
 
 const DRAFT_KEY = 'smg_passenger_draft';
+const PICKUP_POINTS = ['Oldsite Terminal', 'Science Terminal', 'Valco Junction'] as const;
 
 export function SeatBooking({
   trip,
@@ -52,8 +55,10 @@ export function SeatBooking({
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState('');
+  const [boardingPoint, setBoardingPoint] = useState<(typeof PICKUP_POINTS)[number]>(PICKUP_POINTS[0]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { user } = useCustomerAuth();
 
   const {
     register,
@@ -66,14 +71,26 @@ export function SeatBooking({
   });
 
   // Restore any saved passenger draft (preserves progress on back-navigation).
+  // If there is no draft, seed the form from the signed-in customer profile.
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY);
-      if (raw) reset(JSON.parse(raw));
+      if (raw) {
+        reset(JSON.parse(raw));
+        return;
+      }
     } catch {
       /* ignore */
     }
-  }, [reset]);
+    if (user) {
+      reset({
+        fullName: user.fullName,
+        phone: user.phone,
+        email: user.email,
+        idType: 'ghana_card',
+      });
+    }
+  }, [reset, user]);
 
   function toggleSeat(seatId: string, seatCategory: string) {
     setSeatError(null);
@@ -135,14 +152,20 @@ export function SeatBooking({
       }
 
       // 2) Create the pending booking (server recomputes the fare).
+      const auth = user?.provider === 'firebase' ? await getFirebaseAuth() : null;
+      const token = await auth?.currentUser?.getIdToken().catch(() => undefined);
       const bookingRes = await fetch('/api/bookings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           scheduleId: trip.scheduleId,
           seatIds: selected,
           seatCategory: category,
           passenger,
+          boardingPoint,
           promoCode: promoCode || undefined,
           sessionId,
           consent: true,
@@ -184,6 +207,21 @@ export function SeatBooking({
             <CardTitle>Passenger details</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Field label="Pickup point" htmlFor="boardingPoint" required>
+                <Select
+                  id="boardingPoint"
+                  value={boardingPoint}
+                  onChange={(e) => setBoardingPoint(e.target.value as typeof boardingPoint)}
+                >
+                  {PICKUP_POINTS.map((point) => (
+                    <option key={point} value={point}>
+                      {point}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
             <div className="sm:col-span-2">
               <Field label="Full name" htmlFor="fullName" required error={errors.fullName?.message}>
                 <Input id="fullName" {...register('fullName')} aria-invalid={!!errors.fullName} placeholder="As shown on your ID" />
@@ -238,6 +276,7 @@ export function SeatBooking({
               <p className="text-muted-foreground">
                 {formatDate(trip.date)} · {formatTime(trip.departureTime)}–{formatTime(trip.arrivalTime)}
               </p>
+              <p className="text-muted-foreground">Pickup: {boardingPoint}</p>
               <p className="text-muted-foreground">Bus {trip.busNumber} · {trip.busCategory.toUpperCase()}</p>
             </div>
 

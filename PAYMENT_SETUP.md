@@ -33,6 +33,22 @@ Mobile Money (MTN, Telecel/Vodafone Cash, AirtelTigo), Visa/Mastercard, and bank
 
 > Use only **test** keys locally. Never make real transactions during development.
 
+## Paystack production setup
+
+1. In the production host, set `NEXT_PUBLIC_DEMO_MODE=false`, `PAYMENT_PROVIDER=paystack`,
+   `NEXT_PUBLIC_APP_URL=https://<your-domain>`, `PAYSTACK_PUBLIC_KEY=pk_live_...`,
+   `PAYSTACK_SECRET_KEY=sk_live_...`, and `PRODUCTION_CANONICAL_HOSTS=<your-domain>`.
+2. Keep `PAYSTACK_SECRET_KEY` server-side only. Do not prefix it with `NEXT_PUBLIC_`,
+   commit it, paste it into frontend code, or expose it in logs.
+3. `PAYSTACK_WEBHOOK_SECRET` may be omitted; the app falls back to `PAYSTACK_SECRET_KEY`
+   for Paystack HMAC verification. If you set it, it must use the same test/live mode.
+4. Set the Paystack webhook URL to `https://<your-domain>/api/payments/webhook`.
+5. In `/admin/config`, set **Payment mode** to `Live` and store the matching `pk_live_...`
+   public key so staff see the same payment mode the server uses.
+6. Run `npm run production:check` before deployment. It verifies live Paystack mode,
+   approved canonical domain, Firebase auth/admin config, and required server-side
+   signing secrets without printing secret values.
+
 ## Payment flow (security model)
 
 1. `POST /api/payments/init` → provider `initialize()` returns an authorization URL; a

@@ -11,9 +11,13 @@
  * survives Next.js hot-reloads during development.
  */
 import type {
+  Announcement,
   Booking,
   BookingEvent,
   Bus,
+  ContentPage,
+  FareCategoryConfig,
+  FaqItem,
   Payment,
   PaymentMethod,
   Promotion,
@@ -26,11 +30,13 @@ import type {
   AuditLog,
 } from '../types';
 import { buildSeed, type SeedData } from './seed';
+import type { DeletableEntity } from '../db';
 import { calculateFare } from '../fare';
 import { canCancel, canReschedule, computeRefund } from '../booking-rules';
 import { generateId, generateReference, generateTicketNumber } from '../ids';
 import { CURRENCY, SEAT_HOLD_TTL_SECONDS } from '../config';
 import { PassengerDetails } from '../types';
+import { isPublicRoute } from '../public-data';
 
 export type SeatStatus = 'available' | 'booked' | 'blocked' | 'held';
 
@@ -92,6 +98,10 @@ class MockStore {
     return clone(this.data.seatLayouts);
   }
 
+  listFareCategories(): FareCategoryConfig[] {
+    return clone(this.data.fareCategories);
+  }
+
   listPromotions(): Promotion[] {
     return clone(this.data.promotions);
   }
@@ -106,6 +116,10 @@ class MockStore {
 
   listAnnouncements() {
     return clone(this.data.announcements.filter((a) => a.active));
+  }
+
+  listAllAnnouncements() {
+    return clone(this.data.announcements);
   }
 
   listContentPages() {
@@ -126,7 +140,7 @@ class MockStore {
 
   getCities(): string[] {
     const set = new Set<string>();
-    for (const r of this.data.routes) {
+    for (const r of this.data.routes.filter(isPublicRoute)) {
       set.add(r.origin);
       set.add(r.destination);
     }
@@ -149,6 +163,165 @@ class MockStore {
     return this.data.promotions.find((p) => p.code.toLowerCase() === code.trim().toLowerCase());
   }
 
+  upsertRoute(id: string | undefined, input: Omit<Route, 'id' | 'createdAt' | 'updatedAt'>): Route {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.routes.findIndex((route) => route.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.routes[existingIndex] : undefined;
+    const route: Route = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('route'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.routes[existingIndex] = route;
+    else this.data.routes.unshift(route);
+    return clone(route);
+  }
+
+  upsertBus(id: string | undefined, input: Omit<Bus, 'id' | 'capacity' | 'createdAt' | 'updatedAt'>): Bus {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.buses.findIndex((bus) => bus.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.buses[existingIndex] : undefined;
+    const layout = this.data.seatLayouts.find((item) => item.id === input.seatLayoutId);
+    const bus: Bus = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('bus'),
+      capacity: layout?.capacity ?? existing?.capacity ?? 0,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.buses[existingIndex] = bus;
+    else this.data.buses.unshift(bus);
+    return clone(bus);
+  }
+
+  upsertLayout(id: string | undefined, input: Omit<SeatLayout, 'id' | 'createdAt' | 'updatedAt'>): SeatLayout {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.seatLayouts.findIndex((layout) => layout.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.seatLayouts[existingIndex] : undefined;
+    const layout: SeatLayout = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('layout'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.seatLayouts[existingIndex] = layout;
+    else this.data.seatLayouts.unshift(layout);
+    return clone(layout);
+  }
+
+  upsertFareCategory(id: string | undefined, input: Omit<FareCategoryConfig, 'id' | 'createdAt' | 'updatedAt'>): FareCategoryConfig {
+    const now = new Date().toISOString();
+    const recordId = input.key;
+    const existingIndex = this.data.fareCategories.findIndex((category) => category.id === (id ?? recordId));
+    const existing = existingIndex >= 0 ? this.data.fareCategories[existingIndex] : undefined;
+    const category: FareCategoryConfig = {
+      ...input,
+      id: recordId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.fareCategories[existingIndex] = category;
+    else this.data.fareCategories.push(category);
+    this.data.fareCategories.sort((a, b) => a.order - b.order);
+    return clone(category);
+  }
+
+  upsertSchedule(id: string | undefined, input: Omit<Schedule, 'id' | 'bookedSeatIds' | 'createdAt' | 'updatedAt'>): Schedule {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.schedules.findIndex((schedule) => schedule.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.schedules[existingIndex] : undefined;
+    const schedule: Schedule = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('sch'),
+      bookedSeatIds: existing?.bookedSeatIds ?? [],
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.schedules[existingIndex] = schedule;
+    else this.data.schedules.unshift(schedule);
+    return clone(schedule);
+  }
+
+  upsertPromotion(id: string | undefined, input: Omit<Promotion, 'id' | 'createdAt' | 'updatedAt'>): Promotion {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.promotions.findIndex((promo) => promo.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.promotions[existingIndex] : undefined;
+    const promotion: Promotion = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('promo'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.promotions[existingIndex] = promotion;
+    else this.data.promotions.unshift(promotion);
+    return clone(promotion);
+  }
+
+  upsertFaq(id: string | undefined, input: Omit<FaqItem, 'id' | 'createdAt' | 'updatedAt'>): FaqItem {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.faqs.findIndex((faq) => faq.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.faqs[existingIndex] : undefined;
+    const faq: FaqItem = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('faq'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.faqs[existingIndex] = faq;
+    else this.data.faqs.unshift(faq);
+    return clone(faq);
+  }
+
+  upsertAnnouncement(id: string | undefined, input: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt'>): Announcement {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.announcements.findIndex((announcement) => announcement.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.announcements[existingIndex] : undefined;
+    const announcement: Announcement = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('ann'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.announcements[existingIndex] = announcement;
+    else this.data.announcements.unshift(announcement);
+    return clone(announcement);
+  }
+
+  upsertContentPage(id: string | undefined, input: Omit<ContentPage, 'id' | 'createdAt' | 'updatedAt'>): ContentPage {
+    const now = new Date().toISOString();
+    const existingIndex = id ? this.data.contentPages.findIndex((page) => page.id === id) : -1;
+    const existing = existingIndex >= 0 ? this.data.contentPages[existingIndex] : undefined;
+    const page: ContentPage = {
+      ...input,
+      id: existing?.id ?? id ?? generateId('page'),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    if (existingIndex >= 0) this.data.contentPages[existingIndex] = page;
+    else this.data.contentPages.unshift(page);
+    return clone(page);
+  }
+
+  deleteEntity(kind: DeletableEntity, id: string): boolean {
+    const arrays: Record<DeletableEntity, { id: string }[]> = {
+      route: this.data.routes,
+      bus: this.data.buses,
+      seatLayout: this.data.seatLayouts,
+      fareCategory: this.data.fareCategories,
+      schedule: this.data.schedules,
+      promotion: this.data.promotions,
+      faq: this.data.faqs,
+      announcement: this.data.announcements,
+      contentPage: this.data.contentPages,
+    };
+    const list = arrays[kind];
+    const index = list.findIndex((item) => item.id === id);
+    if (index < 0) return false;
+    list.splice(index, 1);
+    return true;
+  }
+
   /* ------------------------------------------------------------------ */
   /* Schedules + availability                                          */
   /* ------------------------------------------------------------------ */
@@ -168,7 +341,7 @@ class MockStore {
   searchSchedules(params: { origin: string; destination: string; date: string }): EnrichedSchedule[] {
     this.cleanupExpiredHolds();
     const routeIds = this.data.routes
-      .filter((r) => r.origin === params.origin && r.destination === params.destination)
+      .filter((r) => isPublicRoute(r) && r.origin === params.origin && r.destination === params.destination)
       .map((r) => r.id);
     return this.data.schedules
       .filter(
@@ -334,6 +507,7 @@ class MockStore {
     seatIds: string[];
     seatCategory: SeatCategory;
     passenger: PassengerDetails;
+    boardingPoint?: string;
     holdId: string;
     sessionId: string;
     promoCode?: string;
@@ -387,7 +561,7 @@ class MockStore {
       customerId: params.customerId,
       origin: view.route.origin,
       destination: view.route.destination,
-      boardingPoint: `${view.route.origin} Terminal`,
+      boardingPoint: params.boardingPoint || `${view.route.origin} Terminal`,
       travelDate: view.schedule.date,
       departureTime: view.schedule.departureTime,
       arrivalTime: view.schedule.arrivalTime,

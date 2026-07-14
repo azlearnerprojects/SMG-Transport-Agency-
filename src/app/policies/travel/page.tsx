@@ -1,10 +1,7 @@
-import type { Metadata } from 'next';
 import { LegalContent } from '@/components/layout/legal-content';
+import { buildRouteMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Travel Policies',
-  description: 'SMG travel, luggage and boarding policies.',
-};
+export const metadata = buildRouteMetadata('/policies/travel');
 
 export default function TravelPolicyPage() {
   return (

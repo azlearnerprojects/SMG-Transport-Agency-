@@ -14,6 +14,30 @@ export const chatbotTones = ['friendly', 'professional', 'concise', 'playful'] a
 export const DEFAULT_PUBLIC_SITE_CONFIG: PublicSiteConfig = {
   siteName: BRAND.name,
   tagline: BRAND.tagline,
+  homeEyebrow: 'Intercity travel across Ghana',
+  homeIntro: 'Search active routes, choose your seat, and pay online with support from the SMG team.',
+  homeHighlights: ['Real-time seat selection', 'Mobile Money and card payments', 'Instant e-tickets'],
+  homeRoutesTitle: 'Popular routes',
+  homeRoutesIntro: 'Routes and fares are managed from the admin dashboard.',
+  homeBenefitsTitle: 'What to expect',
+  homeBenefits: [
+    {
+      title: 'Clear booking',
+      body: 'Search available trips, compare fares, and reserve the seat that works for you.',
+    },
+    {
+      title: 'Reliable support',
+      body: 'Get help before or after travel through the configured SMG support channels.',
+    },
+    {
+      title: 'Admin-managed content',
+      body: 'Landing copy, notices, payment mode, and booking switches are controlled from the dashboard.',
+    },
+  ],
+  homeFaqTitle: 'Questions before you travel?',
+  homeFaqIntro: 'Answers are managed from the FAQ section in the admin dashboard.',
+  homeSupportTitle: 'Need help with a booking?',
+  homeSupportBody: 'Reach the support team using the contact details configured for SMG.',
   supportPhone: BRAND.supportPhone,
   supportWhatsapp: BRAND.whatsapp,
   supportEmail: BRAND.email,
@@ -71,6 +95,11 @@ const contact = z
 
 const text = (max = 300) => z.string().trim().max(max);
 
+const landingBenefitSchema = z.object({
+  title: text(80).min(2),
+  body: text(220).min(4),
+});
+
 /** Social links may be blank; when set they must be full http(s) URLs. */
 const optionalUrl = z
   .string()
@@ -83,6 +112,17 @@ const optionalUrl = z
 export const publicSiteConfigSchema = z.object({
   siteName: text(80).min(2),
   tagline: text(140).min(4),
+  homeEyebrow: text(80).min(2),
+  homeIntro: text(260).min(8),
+  homeHighlights: z.array(text(80).min(2)).max(6),
+  homeRoutesTitle: text(80).min(2),
+  homeRoutesIntro: text(180),
+  homeBenefitsTitle: text(80).min(2),
+  homeBenefits: z.array(landingBenefitSchema).min(1).max(6),
+  homeFaqTitle: text(80).min(2),
+  homeFaqIntro: text(180),
+  homeSupportTitle: text(80).min(2),
+  homeSupportBody: text(220).min(4),
   supportPhone: contact,
   supportWhatsapp: contact,
   supportEmail: z.string().trim().email(),
