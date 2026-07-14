@@ -9,16 +9,6 @@ export const metadata = buildRouteMetadata('/book');
 
 export const dynamic = 'force-dynamic';
 
-function dateOnly(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(base: Date, days: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
 export default async function BookPage() {
   const db = getDb();
   const [cities, schedules, routes, buses, layouts] = await Promise.all([
@@ -33,12 +23,12 @@ export default async function BookPage() {
   const routeById = new Map(publicRoutes.map((r) => [r.id, r]));
   const busById = new Map(buses.map((b) => [b.id, b]));
   const layoutById = new Map(layouts.map((l) => [l.id, l]));
-  const dates = new Set(Array.from({ length: 7 }, (_, offset) => dateOnly(addDays(new Date(), offset))));
+  const today = new Date().toISOString().slice(0, 10);
 
   // One pass over the schedule list instead of a per-city-pair search.
   // Availability here excludes 10-minute seat holds; the seat page re-checks live.
   const trips: StaticTrip[] = schedules
-    .filter((s) => s.status === 'scheduled' && dates.has(s.date))
+    .filter((s) => s.status === 'scheduled' && s.date >= today)
     .flatMap((s) => {
       const route = routeById.get(s.routeId);
       const bus = busById.get(s.busId);
