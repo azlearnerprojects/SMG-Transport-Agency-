@@ -11,11 +11,12 @@ import { getPublicSiteConfig } from '@/lib/site-config';
 import { ChatbotWidget } from '@/components/chatbot/chatbot-widget';
 import {
   CANONICAL_SITE_URL,
-  DEFAULT_OG_IMAGE,
+  DEFAULT_TWITTER_HANDLE,
   HOME_SEO_DESCRIPTION,
   SEO_KEYWORDS,
   absoluteUrl,
   buildSeoMetadata,
+  buildSocialPreviewImage,
 } from '@/lib/seo';
 
 // Site config (branding, contact details, feature switches) is editable from
@@ -53,6 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: homeDescription,
     path: '/',
   });
+  const socialPreviewImage = buildSocialPreviewImage(`${site.siteName} social preview`);
 
   return {
     ...homeMetadata,
@@ -75,20 +77,16 @@ export async function generateMetadata(): Promise<Metadata> {
       title: homeTitle,
       description: homeDescription,
       url: absoluteUrl('/'),
-      images: [
-        {
-          url: absoluteUrl(DEFAULT_OG_IMAGE),
-          width: 1200,
-          height: 630,
-          alt: `${site.siteName} social preview`,
-        },
-      ],
+      images: [socialPreviewImage],
     },
     twitter: {
       card: 'summary_large_image',
       title: homeTitle,
       description: homeDescription,
-      images: [absoluteUrl(DEFAULT_OG_IMAGE)],
+      ...(DEFAULT_TWITTER_HANDLE
+        ? { site: DEFAULT_TWITTER_HANDLE, creator: DEFAULT_TWITTER_HANDLE }
+        : {}),
+      images: [socialPreviewImage],
     },
     alternates: {
       canonical: absoluteUrl('/'),

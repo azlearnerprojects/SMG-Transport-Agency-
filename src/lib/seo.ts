@@ -19,7 +19,11 @@ export function normalizeSiteUrl(value: string): string {
 
 export const CANONICAL_SITE_URL = normalizeSiteUrl(APP_URL);
 export const DEFAULT_OG_IMAGE = '/brand/social-share.png';
+export const DEFAULT_OG_IMAGE_WIDTH = 1200;
+export const DEFAULT_OG_IMAGE_HEIGHT = 630;
+export const DEFAULT_OG_IMAGE_TYPE = 'image/png';
 export const LOGO_IMAGE = '/brand/smg-logo.png';
+export const DEFAULT_TWITTER_HANDLE = twitterHandleFromUrl(BRAND.social.twitter);
 
 export const HOME_SEO_TITLE = 'SMG Transport Agency | Affordable Bus Booking in Ghana';
 export const HOME_SEO_DESCRIPTION =
@@ -155,6 +159,29 @@ export function absoluteUrl(path = '/'): string {
   return `${CANONICAL_SITE_URL}${normalizedPath}`;
 }
 
+export function twitterHandleFromUrl(value: string): string | undefined {
+  try {
+    const url = new URL(value);
+    const handle = url.pathname.split('/').filter(Boolean)[0];
+    return handle ? `@${handle.replace(/^@/, '')}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function buildSocialPreviewImage(alt = `${BRAND.name} social preview`) {
+  const url = absoluteUrl(DEFAULT_OG_IMAGE);
+
+  return {
+    url,
+    secureUrl: url,
+    width: DEFAULT_OG_IMAGE_WIDTH,
+    height: DEFAULT_OG_IMAGE_HEIGHT,
+    alt,
+    type: DEFAULT_OG_IMAGE_TYPE,
+  };
+}
+
 export function serializeJsonLd(value: unknown): string {
   const serialized = JSON.stringify(value);
   return serialized ? serialized.replace(/</g, '\\u003c') : '';
@@ -173,6 +200,8 @@ export function buildSeoMetadata({
 }): Metadata {
   const canonical = absoluteUrl(path);
 
+  const socialPreviewImage = buildSocialPreviewImage();
+
   return {
     title: { absolute: title },
     description,
@@ -185,20 +214,16 @@ export function buildSeoMetadata({
       title,
       description,
       url: canonical,
-      images: [
-        {
-          url: absoluteUrl(DEFAULT_OG_IMAGE),
-          width: 1200,
-          height: 630,
-          alt: `${BRAND.name} social preview`,
-        },
-      ],
+      images: [socialPreviewImage],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [absoluteUrl(DEFAULT_OG_IMAGE)],
+      ...(DEFAULT_TWITTER_HANDLE
+        ? { site: DEFAULT_TWITTER_HANDLE, creator: DEFAULT_TWITTER_HANDLE }
+        : {}),
+      images: [socialPreviewImage],
     },
     robots: robots ?? { index: true, follow: true },
   };

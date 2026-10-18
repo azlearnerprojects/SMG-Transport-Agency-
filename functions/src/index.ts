@@ -4,7 +4,11 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getRemoteConfig } from 'firebase-admin/remote-config';
 import { logger } from 'firebase-functions';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 import { z } from 'zod';
+import nodemailer from 'nodemailer';
 
 initializeApp();
 
@@ -12,6 +16,25 @@ const REGION = process.env.FUNCTIONS_REGION || process.env.GCLOUD_REGION || 'us-
 const VERTEX_LOCATION = process.env.VERTEX_AI_LOCATION || 'global';
 const DEFAULT_MODEL = process.env.VERTEX_AI_DEFAULT_MODEL || 'gemini-3.5-flash';
 const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === 'true';
+const SMTP_HOST = defineSecret('SMTP_HOST');
+const SMTP_PORT = defineSecret('SMTP_PORT');
+const SMTP_USER = defineSecret('SMTP_USER');
+const SMTP_PASSWORD = defineSecret('SMTP_PASSWORD');
+const SMTP_FROM_EMAIL = defineSecret('SMTP_FROM_EMAIL');
+const SMTP_SECRETS = [SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL];
+
+function html(value: unknown) {
+  return String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] as string);
+}
+
+function emailLayout(title: string, content: string) {
+  return `<!doctype html><html><body style="margin:0;background:#F5F8FB;font-family:Arial,Helvetica,sans-serif;color:#102A43"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#fff;border-radius:14px;overflow:hidden"><tr><td style="background:#073B5C;padding:24px 30px;color:#fff"><div style="font-size:13px;letter-spacing:1.4px;font-weight:bold;color:#F6B73C">SMG TRANSPORT AGENCY</div><div style="font-size:23px;font-weight:bold;margin-top:6px">${html(title)}</div></td></tr><tr><td style="padding:30px;font-size:15px;line-height:23px">${content}</td></tr><tr><td style="padding:20px 30px;background:#F1F5F8;color:#52667A;font-size:12px;line-height:18px">Need help? Reply to this email or contact <a href="mailto:support@smgagencygh.com" style="color:#073B5C">support@smgagencygh.com</a>.<br/>SMG Transport Agency &middot; Travel made simple.</td></tr></table></td></tr></table></body></html>`;
+}
+
+async function sendSmtpMail(to: string, subject: string, text: string, body: string) {
+  const transport = nodemailer.createTransport({ host: SMTP_HOST.value(), port: Number(SMTP_PORT.value() || '587'), secure: Number(SMTP_PORT.value() || '587') === 465, auth: { user: SMTP_USER.value(), pass: SMTP_PASSWORD.value() } });
+  await transport.sendMail({ from: SMTP_FROM_EMAIL.value() || `SMG Transport Agency <${SMTP_USER.value()}>`, replyTo: 'support@smgagencygh.com', to, subject, text, html: emailLayout(subject.replace(/^SMG Transport Agency:\s*/, ''), body) });
+}
 
 const REMOTE_CONFIG_KEYS = {
   chatbotEnabled: 'chatbot_enabled',
@@ -539,3 +562,73 @@ export const validateBookingConfig = onCall({ region: REGION, enforceAppCheck: E
     timezone: config.defaultTimezone ?? 'Africa/Accra',
   };
 });
+
+/** Welcome every customer or staff member once their profile is first created. */
+export const sendWelcomeEmail = onDocumentCreated(
+  { document: 'users/{userId}', region: REGION, secrets: SMTP_SECRETS },
+  async (event) => {
+    const user = event.data?.data() ?? {};
+    const email = typeof user.email === 'string' ? user.email.trim() : '';
+    if (!email) return;
+    const name = typeof user.displayName === 'string' ? user.displayName.trim().split(' ')[0] : 'traveller';
+    try {
+      await sendSmtpMail(
+        email,
+        'SMG Transport Agency: Welcome aboard',
+        `Hello ${name}, welcome to SMG Transport Agency. You can now search routes, select your seat and manage your trips online.`,
+        `<p style="margin-top:0">Hello ${html(name)},</p><p>Welcome to SMG Transport Agency. Your account is ready for easier, more confident travel.</p><p>You can now search routes, choose your preferred seat and manage your bookings online.</p><p style="margin:24px 0"><a href="https://smgagencygh.com/book" style="display:inline-block;background:#F6B73C;color:#102A43;padding:12px 18px;border-radius:7px;font-weight:bold;text-decoration:none">Find a trip</a></p>`,
+      );
+      await event.data?.ref.set({ emailNotifications: { welcomeSentAt: new Date().toISOString() } }, { merge: true });
+    } catch (error) {
+      logger.error('Welcome email failed', { userId: event.params.userId, error: String(error) });
+    }
+  },
+);
+
+/** Sends one gentle checkout reminder for an unpaid seat reservation after 15 minutes. */
+export const sendBookingReminders = onSchedule(
+  { schedule: 'every 30 minutes', timeZone: 'Africa/Accra', region: REGION, secrets: SMTP_SECRETS },
+  async () => {
+    const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const bookings = await getFirestore().collection('bookings').where('status', '==', 'pending_payment').where('createdAt', '<=', cutoff).limit(100).get();
+    await Promise.all(bookings.docs.map(async (doc) => {
+      const booking = doc.data();
+      if (booking.emailNotifications?.bookingReminderSentAt || typeof booking.passenger?.email !== 'string') return;
+      const createdAt = new Date(String(booking.createdAt)).getTime();
+      if (!Number.isFinite(createdAt) || Date.now() - createdAt > 24 * 60 * 60 * 1000) return;
+      const name = String(booking.passenger.firstName || 'traveller');
+      const reference = String(booking.reference || 'your booking');
+      const route = `${booking.origin || 'Your departure'} to ${booking.destination || 'your destination'}`;
+      try {
+        await sendSmtpMail(booking.passenger.email, `SMG Transport Agency: Complete your booking ${reference}`, `Hello ${name}, your seat for ${route} is waiting. Complete payment to confirm booking ${reference}.`, `<p style="margin-top:0">Hello ${html(name)},</p><p>Your selected seat for <strong>${html(route)}</strong> is waiting for you.</p><p>Complete payment to confirm your booking before the seat is released.</p><p style="margin:24px 0"><a href="https://smgagencygh.com/book/review/${encodeURIComponent(reference)}" style="display:inline-block;background:#F6B73C;color:#102A43;padding:12px 18px;border-radius:7px;font-weight:bold;text-decoration:none">Finish booking</a></p><p style="color:#52667A;font-size:13px">Booking reference: ${html(reference)}</p>`);
+        await doc.ref.set({ emailNotifications: { bookingReminderSentAt: new Date().toISOString() } }, { merge: true });
+      } catch (error) {
+        logger.error('Booking reminder failed', { booking: reference, error: String(error) });
+      }
+    }));
+  },
+);
+
+/** Keep customers informed when a booking is cancelled or rescheduled by support. */
+export const sendBookingStatusEmail = onDocumentUpdated(
+  { document: 'bookings/{bookingId}', region: REGION, secrets: SMTP_SECRETS },
+  async (event) => {
+    const before = event.data?.before.data() ?? {};
+    const after = event.data?.after.data() ?? {};
+    if (before.status === after.status || typeof after.passenger?.email !== 'string') return;
+    const name = String(after.passenger.firstName || 'traveller');
+    const reference = String(after.reference || '');
+    const route = `${after.origin || 'Your departure'} to ${after.destination || 'your destination'}`;
+    const status = String(after.status || '');
+    if (status === 'cancelled') {
+      try {
+        await sendSmtpMail(after.passenger.email, `SMG Transport Agency: Booking cancelled ${reference}`, `Hello ${name}, booking ${reference} for ${route} has been cancelled. Contact support if you need help.`, `<p style="margin-top:0">Hello ${html(name)},</p><p>Your booking <strong>${html(reference)}</strong> for ${html(route)} has been cancelled.</p><p>If you need help with a refund, alternative trip or any other question, reply to this email and our support team will assist you.</p>`);
+      } catch (error) { logger.error('Cancellation email failed', { booking: reference, error: String(error) }); }
+    }
+    if (status === 'rescheduled') {
+      try {
+        await sendSmtpMail(after.passenger.email, `SMG Transport Agency: Your trip has been rescheduled`, `Hello ${name}, your booking ${reference} has been rescheduled. Please review your updated travel details.`, `<p style="margin-top:0">Hello ${html(name)},</p><p>Your booking <strong>${html(reference)}</strong> has been rescheduled.</p><p><strong>Updated trip:</strong> ${html(route)} on ${html(after.travelDate)} at ${html(after.departureTime)}.</p><p>Please review your booking before travel. If the new time does not work for you, contact support.</p>`);
+      } catch (error) { logger.error('Reschedule email failed', { booking: reference, error: String(error) }); }
+    }
+  },
+);

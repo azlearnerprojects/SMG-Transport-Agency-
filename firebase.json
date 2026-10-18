@@ -28,7 +28,7 @@
       "region": "us-central1",
       "memory": "512MiB",
       "concurrency": 40,
-      "secrets": ["PAYSTACK_SECRET_KEY", "PAYSTACK_WEBHOOK_SECRET", "SMS_API_KEY"]
+      "secrets": ["PAYSTACK_SECRET_KEY", "PAYSTACK_WEBHOOK_SECRET", "SMS_API_KEY", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM_EMAIL"]
     }
   },
   "emulators": {

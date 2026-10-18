@@ -41,6 +41,36 @@ describe('SEO canonical URLs', () => {
     expect(entries.find((entry) => entry.url.endsWith('/book'))?.url).toBe('https://preview.example.com/book');
     expect(robots().sitemap).toBe('https://preview.example.com/sitemap.xml');
   });
+
+  it('wires the generated social preview image into route metadata', async () => {
+    const { buildRouteMetadata } = await loadSeo({
+      NEXT_PUBLIC_APP_URL: 'https://smgagencygh.com',
+    });
+    const metadata = buildRouteMetadata('/book');
+    const openGraphImages = (metadata.openGraph as { images?: Array<Record<string, unknown>> })?.images ?? [];
+    const twitter = metadata.twitter as {
+      card?: string;
+      creator?: string;
+      images?: Array<Record<string, unknown>>;
+      site?: string;
+    };
+    const image = {
+      url: 'https://smgagencygh.com/brand/social-share.png',
+      secureUrl: 'https://smgagencygh.com/brand/social-share.png',
+      width: 1200,
+      height: 630,
+      alt: 'SMG Transport Agency social preview',
+      type: 'image/png',
+    };
+
+    expect(openGraphImages[0]).toMatchObject(image);
+    expect(twitter).toMatchObject({
+      card: 'summary_large_image',
+      site: '@smgtransport',
+      creator: '@smgtransport',
+    });
+    expect(twitter.images?.[0]).toMatchObject(image);
+  });
 });
 
 describe('JSON-LD serialization', () => {
